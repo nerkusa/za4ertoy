@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { db, ref, set, get, onValue, update, remove, authChangeAccount, authDeleteAccount } from './firebase';
 import { CSS } from './styles/globalCss';
 import { nC } from './utils/character';
+import { buildShopDefaults, buildMiscDefaults } from './data/shopDefaults';
+import { buildNpcDefaults } from './data/npcDefaults';
 import { setProfs } from './utils/profStore';
 import { setTraits } from './utils/traitStore';
 import DonatePage from './components/gm/DonatePage';
@@ -54,6 +56,14 @@ get(ref(db,"rooms/"+room+"/npcHits")).then(function(snap){
 }).catch(function(){});
 var u=[];u.push(onValue(ref(db,"rooms/"+room+"/characters"),function(s){sCh(s.val()||{});sLoaded(true)}));u.push(onValue(ref(db,"rooms/"+room+"/lore"),function(s){sLo(s.val()||{})}));u.push(onValue(ref(db,"rooms/"+room+"/mapData"),function(s){sMapData(s.val()||{})}));u.push(onValue(ref(db,"rooms/"+room+"/npcTemplates"),function(s){sNpcTempl(s.val()||{})}));u.push(onValue(ref(db,"rooms/"+room+"/spawned"),function(s){sSpawned(s.val()||{})}));u.push(onValue(ref(db,"rooms/"+room+"/logs"),function(s){var d=s.val()||{};sLg(Object.values(d).sort(function(a,b){return(b.ts||0)-(a.ts||0)}).slice(0,100))}));u.push(onValue(ref(db,"rooms/"+room+"/pendingAttacks"),function(s){sPendAtk(s.val()||{})}));
 u.push(onValue(ref(db,"rooms/"+room+"/dmgEvents"),function(s){sDmgEvents(s.val()||{})}));u.push(onValue(ref(db,"rooms/"+room+"/npcHits"),function(s){sNpcHits(s.val()||{})}));u.push(onValue(ref(db,"rooms/"+room+"/shop"),function(s){sShop(s.val()||[])}));u.push(onValue(ref(db,"rooms/"+room+"/initiative"),function(s){sInitiative(s.val()||null)}));u.push(onValue(ref(db,"rooms/"+room+"/profs"),function(s){sProfsData(s.val()||null)}));u.push(onValue(ref(db,"rooms/"+room+"/chat"),function(s){var d=s.val()||{};sChat(Object.values(d).sort(function(a,b){return(a.ts||0)-(b.ts||0)}).slice(-200))}));u.push(onValue(ref(db,"rooms/"+room+"/traits"),function(s){sTraitsData(s.val()||null)}));u.push(onValue(ref(db,"rooms/"+room+"/gmLog"),function(s){var d=s.val()||{};sGmLog(Object.values(d).sort(function(a,b){return(b.ts||0)-(a.ts||0)}).slice(0,200))}));return function(){u.forEach(function(x){x()})}},[room]);
+/* Новый мир: при первом входе мастера кладём стартовый каталог и бестиарий */
+useEffect(function(){if(!room||!isGM)return;
+get(ref(db,"rooms/"+room+"/seeded")).then(function(snap){
+  if(snap.exists())return;
+  set(ref(db,"rooms/"+room+"/seeded"),Date.now());
+  set(ref(db,"rooms/"+room+"/shop"),buildShopDefaults().concat(buildMiscDefaults()));
+  set(ref(db,"rooms/"+room+"/npcTemplates"),buildNpcDefaults());
+})},[room,isGM]);
 /* Персонаж игрока привязан к логину — создаём один раз, если ещё нет */
 useEffect(function(){if(!room||isGM||!pId)return;
 get(ref(db,"rooms/"+room+"/characters/"+pId)).then(function(snap){

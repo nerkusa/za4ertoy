@@ -7,7 +7,7 @@ import { priceNum, fmtMoney } from '../utils/currency';
 export default function ShopPicker(pr) {
   const [open, setOpen] = useState(false);
   const [collapsedGroups, setCollapsedGroups] = useState({});
-  const items = (pr.items || []).filter(function (i) { return !i.notForSale; });
+  const items = (pr.items || []).filter(function (i) { return pr.all || !i.notForSale; });
   const color = pr.color || '#8a6200';
 
 

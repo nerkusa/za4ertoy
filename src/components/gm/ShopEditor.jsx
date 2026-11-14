@@ -59,7 +59,7 @@ export default function ShopEditor(pr) {
 
   const persist = function (arr) { saveShop(arr); };
   const upd = function (id, patch) { persist(shop.map(function (i) { return i.id === id ? Object.assign({}, i, patch) : i; })); };
-  const del = function (id) { if (window.confirm('Удалить вещь из магазина?')) persist(shop.filter(function (i) { return i.id !== id; })); };
+  const del = function (id) { if (window.confirm('Удалить вещь из каталога?')) persist(shop.filter(function (i) { return i.id !== id; })); };
   const priceField = function (it) {
     return (
       <div style={{ display: 'flex', gap: 10, alignItems: 'flex-end' }}>
@@ -85,7 +85,7 @@ export default function ShopEditor(pr) {
   const seedAll = function () {
     const existingNames = shop.map(function (i) { return (i.name || '').trim().toLowerCase(); });
     const toAdd = buildShopDefaults().concat(buildMiscDefaults()).filter(function (d) { return existingNames.indexOf(d.name.trim().toLowerCase()) < 0; });
-    if (toAdd.length === 0) { alert('Всё это уже есть в магазине.'); return; }
+    if (toAdd.length === 0) { alert('Всё это уже есть в каталоге.'); return; }
     if (!window.confirm('Добавить ' + toAdd.length + ' готовых вещей из каталога (оружие, броня, щиты, вещи, патроны, кассеты, солюшны)? Существующие вещи не тронет.')) return;
     persist(shop.concat(toAdd));
   };
