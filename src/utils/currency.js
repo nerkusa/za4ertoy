@@ -1,46 +1,19 @@
-/* Валюта: золото → серебро → бронза → медь.
-   1 золото = 10 серебра, 1 серебро = 100 бронзы, 1 бронза = 10 меди. */
-var CUR_ORDER = ["gold", "silver", "bronze", "copper"];
-var CUR_LABEL = { gold: "Зол", silver: "Сер", bronze: "Брз", copper: "Мед" };
-var CUR_ICON = { gold: "🟡", silver: "⚪", bronze: "🟠", copper: "🟤" };
-var CUR_NAME = { gold: "Золото", silver: "Серебро", bronze: "Бронза", copper: "Медь" };
-var CUR_RATE = { gold: 10000, silver: 1000, bronze: 10, copper: 1 };
-
-function emptyCurrency() { return { gold: 0, silver: 0, bronze: 0, copper: 0 }; }
-
-function toCopper(cur) {
-  cur = cur || {};
-  return CUR_ORDER.reduce(function (sum, k) { return sum + (cur[k] || 0) * CUR_RATE[k]; }, 0);
+/* Одна валюта: полисный еврорубль, «ер.». Цена — число (или null/"" —
+   бесплатно). Вещи с notForSale купить нельзя, их выдаёт только ГМ. */
+function priceNum(p){
+  if(typeof p==="number")return Math.max(0,Math.floor(p));
+  if(p&&typeof p==="object")return 0; /* старый формат базы — не используется */
+  var n=parseInt(p);return isNaN(n)?0:Math.max(0,n);
+}
+function fmtMoney(n){return priceNum(n)+" ер."}
+/* Списывает цену. Возвращает патч {money}, {} если бесплатно, null (с alert)
+   если денег не хватает. */
+function tryPay(char,price){
+  var cost=priceNum(price);
+  if(cost<=0)return {};
+  var have=(char&&char.money)||0;
+  if(have<cost){alert("Не хватает денег: нужно "+fmtMoney(cost)+", у тебя "+fmtMoney(have));return null}
+  return {money:have-cost};
 }
 
-function fromCopper(total) {
-  total = Math.max(0, Math.floor(total || 0));
-  var out = emptyCurrency();
-  CUR_ORDER.forEach(function (k) {
-    out[k] = Math.floor(total / CUR_RATE[k]);
-    total -= out[k] * CUR_RATE[k];
-  });
-  return out;
-}
-
-/* Компактная цена для бейджей ("💰 5 3 2") — иконка вместо буквы, чтобы
-   не путать "З/С/Бр/М" на глаз. Полные названия — см. CUR_NAME/Памятку. */
-function fmtCurrency(cur) {
-  cur = cur || {};
-  var parts = CUR_ORDER.filter(function (k) { return cur[k]; }).map(function (k) { return CUR_ICON[k] + cur[k]; });
-  return parts.length ? parts.join(" ") : CUR_ICON.copper + "0";
-}
-
-/* Списывает цену с кошелька персонажа. Возвращает патч {currency:...} для
-   слияния в sv(), {} если вещь бесплатная, или null (с alert) если денег
-   не хватает — вызывающий код в этом случае должен прервать покупку. */
-function tryPay(char, price) {
-  var cost = toCopper(price);
-  if (cost <= 0) return {};
-  var curr = (char && char.currency) || emptyCurrency();
-  var have = toCopper(curr);
-  if (have < cost) { alert("Не хватает денег: нужно " + fmtCurrency(price) + ", у тебя " + fmtCurrency(curr)); return null; }
-  return { currency: fromCopper(have - cost) };
-}
-
-export { CUR_ORDER, CUR_LABEL, CUR_ICON, CUR_NAME, CUR_RATE, emptyCurrency, toCopper, fromCopper, fmtCurrency, tryPay };
+export { priceNum, fmtMoney, tryPay };

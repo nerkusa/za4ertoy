@@ -1,116 +1,115 @@
 import React, { useState } from 'react';
-import { S } from '../../styles/ui';
 import { uid, r1 } from '../../utils/dice';
-import { cF, mHP } from '../../utils/character';
-import { CUR_ORDER, CUR_LABEL, CUR_ICON, emptyCurrency, toCopper, fromCopper, fmtCurrency } from '../../utils/currency';
+import { cF, hpOf, willOf } from '../../utils/character';
+import { priceNum, fmtMoney, tryPay } from '../../utils/currency';
 import LiveField from '../LiveField';
 
-/* "NdM" -> сумма броска (та же логика, что и у ремкомплектов в ArmorSection) */
+/* "NdM" -> сумма броска */
 function rollDice(d){var m=(""+d).match(/(\d+)d(\d+)/);if(!m)return r1(4);var n=parseInt(m[1])||1,f=parseInt(m[2])||4,t=0;for(var i=0;i<n;i++)t+=r1(f);return t}
 
 var ITEM_SUBORDER=["potion","ammo","repair","misc"];
-var ITEM_SUBLABEL={potion:"🧪 Зелья и тоники",ammo:"🏹 Боеприпасы",repair:"🔧 Ремкомплекты",misc:"🎒 Бытовые вещи"};
-function itemSubOf(it){if(it.heal)return"potion";if(it.ptype||it.cat==="ammo")return"ammo";if(it.dice||it.cat==="tool")return"repair";return"misc"}
+var ITEM_SUBLABEL={potion:"Расходники",ammo:"Боеприпасы",repair:"Ремкомплекты",misc:"Вещи"};
+function itemSubOf(it){if(it.heal||it.doseHeal)return"potion";if(it.ptype||it.cat==="ammo")return"ammo";if(it.dice||it.cat==="tool")return"repair";return"misc"}
 
+/* Сумка: вещи, расходники, деньги. Логика базы, валюта — одна (ер.). */
 function InvTab(pr){var c=pr.char;var sv=pr.save;var _a=useState("");var ni=_a[0];var sNI=_a[1];var _sp=useState(false);var spOpen=_sp[0];var sSpOpen=_sp[1];
 var _cg=useState({});var collapsedGroups=_cg[0];var sCG=_cg[1];
-var shopItems=(pr.shop||[]).filter(function(i){return i.cat==="item"||i.cat==="tool"||i.cat==="ammo"});
-var curr=c.currency||{gold:0,silver:(c.gold||0),bronze:0,copper:0};
+var shopItems=(pr.shop||[]).filter(function(i){return (i.cat==="item"||i.cat==="tool"||i.cat==="ammo")&&!i.notForSale});
+var money=c.money||0;var inv=c.inventory||[];
 
-function addLocal(){if(!ni.trim())return;sv(Object.assign({},c,{inventory:(c.inventory||[]).concat([{id:uid(),name:ni.trim(),qty:1,equipped:false}])}));sNI("")}
+function addLocal(){if(!ni.trim())return;sv(Object.assign({},c,{inventory:inv.concat([{id:uid(),name:ni.trim(),qty:1,equipped:false}])}));sNI("")}
 
-/* Зелья/тоники — расходуются, откатывают HP или Волю на бросок кости и
-   пишутся в лог, как и починка снаряжения. */
+/* Расходники: бинты лечат Здоровье (heal), синька снимает Дозу (doseHeal),
+   healWill — Волю. Тратятся и пишутся в лог. */
 function useItem(idx){
-  var it=(c.inventory||[])[idx];if(!it||!it.heal)return;
-  var amt=rollDice(it.heal);
-  var patch={};
-  if(it.healWill){
-    var mxW=c.willOv||cF(c).fs.WILL||1;var curW=c.curWill!==null&&c.curWill!==undefined?c.curWill:mxW;
-    patch.curWill=Math.min(mxW,curW+amt);
+  var it=inv[idx];if(!it||(!it.heal&&!it.doseHeal))return;
+  var patch={};var label,sub,amt=0;var fs=cF(c).fs;
+  if(it.doseHeal){
+    amt=parseInt(it.doseHeal)||0;var nd=Math.max(0,(c.dose||0)-amt);patch.dose=nd;
+    label=it.name+": Доза −"+amt;sub="Доза: "+(c.dose||0)+" → "+nd;
   } else {
-    var mx=c.hpOv||mHP(cF(c).fs,c);var curH=c.curHp!==null&&c.curHp!==undefined?c.curHp:mx;
-    patch.curHp=Math.min(mx,curH+amt);
+    amt=rollDice(it.heal);
+    if(it.healWill){var w=willOf(c,fs);patch.curWill=Math.min(w.max,w.cur+amt);label=it.name+": +"+amt+" Воли";sub="Восстановлено Воли: +"+amt}
+    else{var h=hpOf(c,fs);patch.curHp=Math.min(h.max,h.cur+amt);label=it.name+": +"+amt+" Здоровья";sub="Восстановлено Здоровья: +"+amt}
   }
-  patch.inventory=(c.inventory||[]).map(function(i,j){return j===idx?Object.assign({},i,{qty:(i.qty||0)-1}):i}).filter(function(i){return i.qty>0});
+  patch.inventory=inv.map(function(i,j){return j===idx?Object.assign({},i,{qty:(i.qty||0)-1}):i}).filter(function(i){return i.qty>0});
   sv(Object.assign({},c,patch));
-  if(pr.addLog)pr.addLog({who:c.name||"???",type:"rest",label:"🧪 "+it.name+": +"+amt+(it.healWill?" Воли":" HP"),detail:it.heal,total:amt});
-  if(pr.onRoll)pr.onRoll({label:it.name,d10:null,parts:[],total:amt,subtext:(it.healWill?"Восстановлено Воли: +":"Восстановлено HP: +")+amt});
+  if(pr.addLog)pr.addLog({who:c.name||"???",type:"rest",label:label,detail:it.heal||"",total:amt});
+  if(pr.onRoll)pr.onRoll({label:it.name,d10:null,parts:[],total:amt,subtext:sub});
 }
 
-function setCur(k,d){var nc=Object.assign({},curr);nc[k]=Math.max(0,(nc[k]||0)+d);sv(Object.assign({},c,{currency:nc}))}
-
-function setCurAbs(k,val){var nc=Object.assign({},curr);nc[k]=Math.max(0,parseInt(val)||0);sv(Object.assign({},c,{currency:nc}))}
-
-function priceOf(it){return (it.price&&typeof it.price==="object")?it.price:emptyCurrency()}
-
 function pickItem(it){
-  var price=priceOf(it);var cost=toCopper(price);var patch={};
-  if(cost>0){
-    var have=toCopper(curr);
-    if(have<cost){alert("Не хватает денег: нужно "+fmtCurrency(price)+", у тебя "+fmtCurrency(curr));return}
-    patch.currency=fromCopper(have-cost);
-  }
-  var ptype=it.ptype||(it.cat==="ammo"?"Стрела":"");
+  var pay=tryPay(c,it.price);if(pay===null)return;var patch=Object.assign({},pay);
+  var ptype=it.ptype||(it.cat==="ammo"?"Пуля":"");
   var dice=it.dice||(it.cat==="tool"?"1d4":"");
-  var heal=it.heal||"";
-  var inv=(c.inventory||[]).slice();
+  var heal=it.heal||"";var doseHeal=it.doseHeal||0;
+  var n=inv.slice();
   if(ptype){
     var bundle=it.bundleQty||1;
-    var ex=inv.find(function(i){return i.proj&&i.ptype===ptype});
-    if(ex){inv=inv.map(function(i){return i===ex?Object.assign({},i,{qty:(i.qty||0)+bundle}):i})}
-    else{inv=inv.concat([{id:uid(),name:it.name,qty:bundle,equipped:false,proj:true,ptype:ptype}])}
+    var ex=n.find(function(i){return i.proj&&i.ptype===ptype});
+    if(ex){n=n.map(function(i){return i===ex?Object.assign({},i,{qty:(i.qty||0)+bundle}):i})}
+    else{n=n.concat([{id:uid(),name:it.name,qty:bundle,equipped:false,proj:true,ptype:ptype}])}
   } else if(dice){
-    inv=inv.concat([{id:uid(),name:it.name,qty:1,equipped:false,tool:true,dice:dice}]);
-  } else if(heal){
-    var exH=inv.find(function(i){return i.heal===heal&&i.healWill===!!it.healWill&&i.name===it.name});
-    if(exH){inv=inv.map(function(i){return i===exH?Object.assign({},i,{qty:(i.qty||0)+1}):i})}
-    else{inv=inv.concat([{id:uid(),name:it.name,qty:1,equipped:false,heal:heal,healWill:!!it.healWill}])}
+    n=n.concat([{id:uid(),name:it.name,qty:1,equipped:false,tool:true,dice:dice}]);
+  } else if(heal||doseHeal){
+    var exH=n.find(function(i){return i.name===it.name&&(i.heal||"")===heal&&(i.doseHeal||0)===doseHeal});
+    if(exH){n=n.map(function(i){return i===exH?Object.assign({},i,{qty:(i.qty||0)+1}):i})}
+    else{n=n.concat([{id:uid(),name:it.name,qty:1,equipped:false,heal:heal,healWill:!!it.healWill,doseHeal:doseHeal}])}
   } else {
-    inv=inv.concat([{id:uid(),name:it.name,qty:1,equipped:false}]);
+    n=n.concat([{id:uid(),name:it.name,qty:1,equipped:false}]);
   }
-  patch.inventory=inv;
+  patch.inventory=n;
   sv(Object.assign({},c,patch));
   sSpOpen(false);
 }
+function setQty(idx,d){sv(Object.assign({},c,{inventory:inv.map(function(i,j){return j===idx?Object.assign({},i,{qty:Math.max(0,(i.qty||0)+d)}):i}).filter(function(i){return i.qty>0})}))}
 
-return(<div style={{display:"flex",flexDirection:"column",gap:6}}>
-<div style={{display:"flex",gap:3}}>
-<input style={Object.assign({},S.inp,{flex:2})} value={ni} onChange={function(e){sNI(e.target.value)}} placeholder="Предмет..." onKeyDown={function(e){if(e.key==="Enter")addLocal()}}/>
-<button onClick={addLocal} title="Добавить свой предмет" style={Object.assign({},S.ab,{width:30,background:"#10b981",color:"#fff",fontWeight:700,border:"none"})}>+</button>
-<button onClick={function(){sSpOpen(!spOpen)}} title="Взять из магазина" style={Object.assign({},S.ab,{width:30,background:"#f59e0b",color:"#161826",fontWeight:700,border:"none",fontSize:14})}>{spOpen?"✕":"+"}</button>
+return(<div style={{display:"flex",flexDirection:"column",gap:8}}>
+<div className="row" style={{background:"var(--paper)",border:"1px solid var(--ink)",padding:"6px 10px"}}>
+  <span className="lblm">Еврорубли</span>
+  <span className="pm" style={{marginLeft:0}}>{[-10,-1].map(function(d){return <button key={d} style={{width:34}} onClick={function(){sv(Object.assign({},c,{money:Math.max(0,money+d)}))}}>{d}</button>})}</span>
+  <LiveField type="number" min="0" value={money} onCommit={function(val){sv(Object.assign({},c,{money:Math.max(0,parseInt(val)||0)}))}} style={{width:84,textAlign:"center",fontFamily:"var(--f-mono)",fontSize:16}}/>
+  <span className="pm" style={{marginLeft:0}}>{[1,10].map(function(d){return <button key={d} style={{width:34}} onClick={function(){sv(Object.assign({},c,{money:money+d}))}}>{"+"+d}</button>})}</span>
+  <span className="mono">ер.</span>
 </div>
-{spOpen&&<div style={{background:"#1b1d29",border:"1px solid #34374a",borderRadius:8,padding:6,display:"flex",flexDirection:"column",gap:3}}>
-{shopItems.length===0&&<div style={{fontSize:9,color:"#9397ab",fontStyle:"italic",textAlign:"center",padding:6}}>Пусто — ГМ ещё не добавил вещи</div>}
+<div className="row">
+<input className="n-input" style={{flex:1,minWidth:120}} value={ni} onChange={function(e){sNI(e.target.value)}} placeholder="Своя вещь…" onKeyDown={function(e){if(e.key==="Enter")addLocal()}}/>
+<button className="btn" onClick={addLocal}>Добавить</button>
+<button className="btn main" onClick={function(){sSpOpen(!spOpen)}}>{spOpen?"Закрыть каталог":"Из каталога"}</button>
+</div>
+{spOpen&&<div style={{background:"var(--paper)",border:"1px solid var(--ink)",padding:8,display:"flex",flexDirection:"column",gap:4}}>
+{shopItems.length===0&&<div className="hint" style={{textAlign:"center",padding:6}}>Пусто — мастер ещё не добавил вещи</div>}
 {ITEM_SUBORDER.map(function(sk){
 var list=shopItems.filter(function(it){return itemSubOf(it)===sk});
 if(!list.length)return null;
 var collapsed=collapsedGroups[sk]!==undefined?collapsedGroups[sk]:list.length>6;
 return(<div key={sk} style={{display:"flex",flexDirection:"column",gap:3}}>
-<button onClick={function(){sCG(function(cg){var n=Object.assign({},cg);n[sk]=!collapsed;return n})}} style={{display:"flex",justifyContent:"space-between",alignItems:"center",width:"100%",background:"none",border:"none",padding:"3px 1px",marginTop:3,cursor:"pointer"}}>
-<span style={{fontSize:9,fontWeight:700,color:"#f59e0b"}}>{ITEM_SUBLABEL[sk]}</span>
-<span style={{fontSize:8,color:"#75798c"}}>{(collapsed?"▸ показать ":"▾ скрыть ")+list.length}</span>
+<button onClick={function(){sCG(function(cg){var n=Object.assign({},cg);n[sk]=!collapsed;return n})}} style={{display:"flex",justifyContent:"space-between",alignItems:"center",width:"100%",background:"none",border:"none",padding:"4px 1px",marginTop:3}}>
+<span className="lblm" style={{color:"var(--swamp)"}}>{ITEM_SUBLABEL[sk]}</span>
+<span className="lblm">{(collapsed?"показать ":"скрыть ")+list.length}</span>
 </button>
-{!collapsed&&list.map(function(it){var ptype=it.ptype||(it.cat==="ammo"?"Стрела":"");var dice=it.dice||(it.cat==="tool"?"1d4":"");var heal=it.heal||"";var price=priceOf(it);var cost=toCopper(price);
-return(<div key={it.id} style={{display:"flex",alignItems:"center",gap:6,background:"#232532",border:"1px solid #34374a",borderRadius:6,padding:"4px 7px"}}>
+{!collapsed&&list.map(function(it){var ptype=it.ptype||(it.cat==="ammo"?"Пуля":"");var dice=it.dice||(it.cat==="tool"?"1d4":"");var cost=priceNum(it.price);
+return(<div key={it.id} style={{display:"flex",alignItems:"center",gap:8,borderBottom:"1px solid var(--line)",padding:"5px 2px"}}>
 <div style={{flex:1,minWidth:0}}>
-<div style={{fontSize:10,fontWeight:700,color:"#e9e9ed"}}>{it.name}{cost>0?<span style={{fontSize:8,color:"#d97706",marginLeft:5}}>{"💰 "+fmtCurrency(price)}</span>:null}</div>
-<div style={{fontSize:8,color:"#9397ab"}}>{[it.desc,ptype?("снаряд: "+ptype+(it.bundleQty>1?" ×"+it.bundleQty:"")):null,dice?"починка "+dice:null,heal?("🧪 "+heal+(it.healWill?" Воли":" HP")):null].filter(Boolean).join(" · ")}</div>
+<div style={{fontWeight:700}}>{it.name}{cost>0?<span className="mono" style={{fontSize:12,color:"var(--swamp)",marginLeft:8}}>{fmtMoney(cost)}</span>:null}</div>
+<div className="hint">{[it.desc,ptype?("снаряд: "+ptype+(it.bundleQty>1?" ×"+it.bundleQty:"")):null,dice?"починка "+dice:null,it.heal?("+"+it.heal+(it.healWill?" Воли":" Здоровья")):null,it.doseHeal?("−"+it.doseHeal+" Дозы"):null].filter(Boolean).join(" · ")}</div>
 </div>
-<button onClick={function(){pickItem(it)}} style={{padding:"3px 9px",borderRadius:5,border:"none",background:"#f59e0b",color:"#161826",fontWeight:700,fontSize:9,cursor:"pointer"}}>Взять</button>
+<button className="btn sm" onClick={function(){pickItem(it)}}>Взять</button>
 </div>)})}
 </div>)})}
 </div>}
-<div style={{background:"#2a2008",borderRadius:8,padding:"6px 8px",display:"flex",flexWrap:"wrap",gap:8,justifyContent:"space-between"}}>
-{CUR_ORDER.map(function(k){return(<div key={k} style={{display:"flex",alignItems:"center",gap:3}}>
-<span style={{fontSize:11}}>{CUR_ICON[k]}</span>
-<span style={{fontSize:8,color:"#9397ab",fontWeight:700,width:22}}>{CUR_LABEL[k]}</span>
-<button onClick={function(){setCur(k,-1)}} style={S.sm}>−</button>
-<LiveField type="number" min="0" value={curr[k]||0} onCommit={function(val){setCurAbs(k,val)}} style={{fontFamily:"'Inter',sans-serif",fontSize:12,fontWeight:700,color:"#d97706",background:"#1b1d29",border:"1px solid #34374a",borderRadius:5,width:44,textAlign:"center",padding:"2px 0",outline:"none"}}/>
-<button onClick={function(){setCur(k,1)}} style={S.sm}>+</button>
-</div>)})}
+{inv.length===0&&<p className="hint">Сумка пуста.</p>}
+<div className="log">
+{inv.map(function(it,idx){var usable=it.heal||it.doseHeal;return <div key={(it.id!=null?it.id:"i")+"_"+idx} style={{display:"flex",alignItems:"center",gap:6,borderBottom:"1px solid var(--line)",padding:"5px 0",flexWrap:"wrap"}}>
+<button title="Отметить «при себе»" onClick={function(){sv(Object.assign({},c,{inventory:inv.map(function(i,j){return j===idx?Object.assign({},i,{equipped:!i.equipped}):i})}))}} style={{width:22,height:22,border:"1px solid var(--ink)",background:it.equipped?"var(--ink)":"var(--paper)",padding:0}}/>
+<span style={{flex:1,minWidth:90}}>{it.name}{it.heal?<span className="mono" style={{fontSize:11,color:"var(--swamp)",marginLeft:6}}>{"+"+it.heal}</span>:null}{it.doseHeal?<span className="mono" style={{fontSize:11,color:"var(--swamp)",marginLeft:6}}>{"−"+it.doseHeal+" Дозы"}</span>:null}{it.proj?<span className="mono" style={{fontSize:11,color:"var(--muted)",marginLeft:6}}>{it.ptype}</span>:null}</span>
+{usable&&<button className="btn sm" onClick={function(){useItem(idx)}}>Применить</button>}
+<span className="pm" style={{marginLeft:0}}><button onClick={function(){setQty(idx,-1)}}>−</button></span>
+<b className="mono" style={{minWidth:22,textAlign:"center"}}>{it.qty}</b>
+<span className="pm" style={{marginLeft:0}}><button onClick={function(){setQty(idx,1)}}>+</button></span>
+<button title="Выбросить" onClick={function(){sv(Object.assign({},c,{inventory:inv.filter(function(i,j){return j!==idx})}))}} style={{background:"none",border:"none",color:"var(--rust)",fontSize:15,padding:"0 4px"}}>✕</button>
+</div>})}
 </div>
-{(c.inventory||[]).map(function(it,idx){return <div key={(it.id!=null?it.id:"i")+"_"+idx} style={{display:"flex",alignItems:"center",gap:3,background:it.equipped?"#12233a":"#1b1d29",border:"1px solid #34374a",borderRadius:5,padding:"3px 6px"}}><button onClick={function(){sv(Object.assign({},c,{inventory:(c.inventory||[]).map(function(i,j){return j===idx?Object.assign({},i,{equipped:!i.equipped}):i})}))}} style={{background:"none",border:"none",fontSize:11,cursor:"pointer"}}>{it.equipped?"🛡️":"📦"}</button><span style={{flex:1,fontSize:9}}>{it.name}{it.heal?<span style={{color:"#f87171",marginLeft:4}}>{"🧪"+it.heal}</span>:null}</span>{it.heal&&<button onClick={function(){useItem(idx)}} title={"Выпить/использовать: +"+it.heal+(it.healWill?" Воли":" HP")} style={{padding:"2px 7px",borderRadius:4,border:"none",background:"#dc2626",color:"#fff",fontWeight:700,fontSize:8,cursor:"pointer"}}>Исп.</button>}<button onClick={function(){sv(Object.assign({},c,{inventory:(c.inventory||[]).map(function(i,j){return j===idx?Object.assign({},i,{qty:Math.max(0,i.qty-1)}):i}).filter(function(i){return i.qty>0})}))}} style={Object.assign({},S.sm,{width:16,height:16,fontSize:7})}>−</button><span style={{fontSize:9,fontWeight:700}}>{it.qty}</span><button onClick={function(){sv(Object.assign({},c,{inventory:(c.inventory||[]).map(function(i,j){return j===idx?Object.assign({},i,{qty:i.qty+1}):i})}))}} style={Object.assign({},S.sm,{width:16,height:16,fontSize:7})}>+</button><button onClick={function(){sv(Object.assign({},c,{inventory:(c.inventory||[]).filter(function(i,j){return j!==idx})}))}} style={{background:"none",border:"none",color:"#ef4444",fontSize:9,cursor:"pointer"}}>✕</button></div>})}
 </div>)}
 
 export default InvTab;

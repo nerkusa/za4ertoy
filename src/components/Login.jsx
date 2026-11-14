@@ -31,7 +31,7 @@ function doRegister(){
   });
 }
 function onKeyDown(e){if(e.key==="Enter"){md==="login"?doLogin():doRegister()}}
-return(<div style={{fontFamily:"'Inter',sans-serif",color:"var(--color-text)",background:"radial-gradient(circle at 50% 20%,#1c1f34,var(--color-bg) 60%)",minHeight:"100vh",width:"100%",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:"24px 16px"}}>
+return(<div style={{fontFamily:"var(--f-body)",color:"var(--color-text)",background:"radial-gradient(circle at 50% 20%,#2a251e,var(--color-bg) 60%)",minHeight:"100vh",width:"100%",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:"24px 16px"}}>
 <style>{CSS}</style>
 <div style={{width:"100%",maxWidth:380}}>
 
@@ -53,9 +53,9 @@ return(<div style={{fontFamily:"'Inter',sans-serif",color:"var(--color-text)",ba
     <input className="n-input" type="password" value={ps2} onChange={function(e){sP2(e.target.value)}} onKeyDown={onKeyDown} placeholder="••••••••"/>
   </div>}
 
-  {er&&<div style={{color:"#ef4444",fontSize:12,marginBottom:14}}>{er}</div>}
+  {er&&<div style={{color:"#8a3b22",fontSize:12,marginBottom:14}}>{er}</div>}
 
-  <button onClick={md==="login"?doLogin:doRegister} disabled={ld} className="n-btn n-btn-primary n-btn-block" style={{minHeight:44,fontSize:15}}>{ld?"⏳ …":(md==="login"?"Войти":"Зарегистрироваться")}</button>
+  <button onClick={md==="login"?doLogin:doRegister} disabled={ld} className="n-btn n-btn-primary n-btn-block" style={{minHeight:44,fontSize:15}}>{ld?"…":(md==="login"?"Войти":"Зарегистрироваться")}</button>
 
   <div style={{display:"flex",justifyContent:"center",marginTop:16}}>
     <button onClick={function(){sM(md==="login"?"register":"login");sE("")}} className="n-btn" style={{color:"var(--color-accent)",fontSize:13,padding:"6px 4px"}}>{md==="login"?"Нет аккаунта? Создать":"← Уже есть аккаунт? Войти"}</button>

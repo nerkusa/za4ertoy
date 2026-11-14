@@ -1,0 +1,101 @@
+import React, { useState } from 'react';
+import { SD, SKD, DC_LIST, stName } from '../../data/stats';
+import { cF, rndStats } from '../../utils/character';
+import { rollHit } from '../../utils/dice';
+import { fumbleFx } from '../../utils/gearFx';
+import { fineBlocked } from '../../data/traits';
+import { getTraits } from '../../utils/traitStore';
+import { IconD10 } from '../../icons/index';
+
+/* Вкладка «Навыки»: проверки характеристик и навыков против СЛ.
+   итог = характеристика + навык + эффекты + штрафы + d10 (rollHit). */
+function SkillsTab(pr){
+var c=pr.char;var sv=pr.save;var isGM=!!pr.isGM;
+var inf=cF(c);var fs=inf.fs;var es=inf.eSk;
+var _dc=useState(0);var dc=_dc[0];var sDC=_dc[1];
+var _un=useState(null);var undo=_un[0];var sU=_un[1];
+var free=isGM||!c.locked;            /* свободная правка чисел */
+var pts=c.skillPts||0;
+var hasUnlocked=c.locked&&!isGM&&JSON.stringify(c.skills||{})!==JSON.stringify(c.lockedSkills||c.skills||{});
+
+function uS(k,d){if(!free)return;var stats=Object.assign({},c.stats);stats[k]=Math.max(1,Math.min(10,(stats[k]||1)+d));sv(Object.assign({},c,{stats:stats}))}
+function uSk(n,d){
+  var skills=Object.assign({},c.skills);var cur=skills[n]||0;
+  if(free){skills[n]=Math.max(0,Math.min(10,cur+d));sv(Object.assign({},c,{skills:skills}));return}
+  /* принятый лист: игрок тратит только очки уровня, вернуть можно не ниже зафиксированного */
+  var floor=(c.lockedSkills&&c.lockedSkills[n])||0;
+  if(d<0){if(cur<=floor)return;skills[n]=cur-1;sv(Object.assign({},c,{skills:skills,skillPts:pts+1}));return}
+  if(pts<1||cur>=10)return;skills[n]=cur+1;sv(Object.assign({},c,{skills:skills,skillPts:pts-1}));
+}
+function roll(statKey,skill){
+  var R=rollHit();var sVal=fs[statKey]||0;var kVal=skill?(es[skill]||0):0;
+  var pen=inf.rollPen(statKey);var total=R.d+sVal+kVal+pen.total;
+  var patch={};if(c.shakenPenalty)patch.shakenPenalty=0;
+  var fx=skill?fumbleFx(c,inf,skill,R):{patch:{},logs:[],notes:[]};
+  Object.assign(patch,fx.patch);
+  if(Object.keys(patch).length)sv(Object.assign({},c,patch));
+  var label=skill||stName(statKey);
+  var res=dc?(total>=dc?"успех":"провал"):"";
+  var parts=[{label:stName(statKey),value:sVal}];
+  if(skill)parts.push({label:skill,value:kVal});
+  pen.parts.forEach(function(p){parts.push(p)});
+  var notes=[];
+  if(dc)notes.push("СЛ "+dc+": "+(total>=dc?"УСПЕХ":"ПРОВАЛ"));
+  if(skill&&fineBlocked(c,getTraits(),skill))notes.push("Клешня: тонкая работа невозможна");
+  fx.notes.forEach(function(n){notes.push(n)});
+  if(pr.addLog){
+    pr.addLog({who:c.name||"???",type:"skill",label:"Проверка: "+label+(dc?" · СЛ "+dc+" — "+res:"")+(R.crit?" · крит":R.fumble?" · срыв":""),detail:"d10("+R.d+") + "+parts.map(function(p){return p.label+"("+p.value+")"}).join(" + ")+" = "+total,total:total});
+    fx.logs.filter(function(l){return !l.gmOnly}).forEach(function(l,i){setTimeout(function(){pr.addLog(Object.assign({who:c.name||"???"},l))},5+i)});
+  }
+  pr.onRoll({label:label,d10:R.d,crit:R.crit,fumble:R.fumble,parts:parts,total:total,subtext:notes.join("\n")});
+}
+function bonusOf(list){return (list||[]).filter(function(b){return b.amount}).map(function(b){return (b.amount>0?"+":"")+b.amount+" "+(b.src?b.src.name:"")}).join(", ")}
+
+return(<div style={{display:"flex",flexDirection:"column",gap:12}}>
+<div className="slbar"><span>СЛ:</span>
+<button className={dc===0?"on":""} onClick={function(){sDC(0)}}>без СЛ</button>
+{DC_LIST.map(function(d){return <button key={d.v} className={dc===d.v?"on":""} title={d.l} onClick={function(){sDC(d.v)}}>{d.v}</button>})}
+<span style={{color:"var(--muted)"}}>{dc?(DC_LIST.find(function(d){return d.v===dc})||{}).l:"бросок без сложности"}</span>
+</div>
+{(inf.pen.dose||inf.pen.disease||inf.pen.will||inf.pen.shaken)?<div className="warnbox">{"Штрафы: "+[inf.pen.will?"Воля "+inf.pen.will:null,inf.pen.shaken?"потрясён "+inf.pen.shaken:null,inf.pen.dose?"Доза "+inf.pen.dose+" ко всем броскам":null,inf.pen.disease?"болезнь −1 к Телу и Реакции":null].filter(Boolean).join(" · ")}</div>:null}
+{c.locked&&!isGM&&pts>0&&<div className="okbox">{"Очки навыков за уровень: "+pts+" — трать кнопками «+» у навыков."}</div>}
+{isGM&&<div className="hint">Мастер правит числа свободно.</div>}
+{!c.locked&&!isGM&&<div className="hint">Черновик: впиши характеристики и навыки по согласованию с мастером, затем нажми «Принять».</div>}
+
+<div className="statgrid">
+{SD.map(function(st){var v=fs[st.key]||0;var base=(c.stats||{})[st.key]||0;var sb=bonusOf(inf.src.stat[st.key]);
+return(<div key={st.key} className="stat" style={{borderTopColor:st.color}}>
+<div style={{display:"flex",alignItems:"center"}}>
+<button className="sh" onClick={function(){roll(st.key,null)}} title={"Бросить "+st.full}>
+<span className="sv">{v}</span>
+<span className="sn">{st.full}<small>{sb?("база "+base+" · "+sb):"бросок характеристики"}</small></span>
+<IconD10 size={16}/>
+</button>
+{free&&<span className="pm" style={{marginRight:8}}><button onClick={function(){uS(st.key,-1)}}>−</button><button onClick={function(){uS(st.key,1)}}>+</button></span>}
+</div>
+<div className="skl">
+{SKD[st.key].map(function(s){var ev=es[s.name]||0;var bon=bonusOf(inf.src.skill[s.name]);var blocked=fineBlocked(c,getTraits(),s.name);
+var canMinus=free||(c.locked&&(c.skills[s.name]||0)>((c.lockedSkills&&c.lockedSkills[s.name])||0));var canPlus=free||pts>0;
+return(<div key={s.name} style={{display:"flex",alignItems:"center"}}>
+<button className="sk" onClick={function(){roll(st.key,s.name)}}>
+<span>{s.name}{blocked&&<em style={{color:"var(--rust)",fontSize:11,marginLeft:6}}>тонкая работа невозможна</em>}</span>
+<span className="bon">{bon}</span>
+<span className="tot">{v+ev}<em>{" ("+v+"+"+ev+")"}</em></span>
+</button>
+{(free||pts>0||canMinus&&c.locked&&!isGM&&hasUnlocked)&&<span className="pm" style={{marginRight:8}}><button disabled={!canMinus} onClick={function(){uSk(s.name,-1)}}>−</button><button disabled={!canPlus} onClick={function(){uSk(s.name,1)}}>+</button></span>}
+</div>)})}
+</div>
+</div>)})}
+</div>
+
+<div className="row">
+{!c.locked&&!isGM&&<button className="btn" onClick={function(){sU({stats:Object.assign({},c.stats),skills:Object.assign({},c.skills)});var r=rndStats(c.profession,c.origin);sv(Object.assign({},c,r,{curHp:null,curWill:null}))}}>Случайные числа</button>}
+{!c.locked&&!isGM&&undo&&<button className="btn" onClick={function(){sv(Object.assign({},c,undo,{curHp:null,curWill:null}));sU(null)}}>Отменить</button>}
+{!c.locked&&!isGM&&<button className="btn main" onClick={function(){if(!window.confirm("Принять характеристики и навыки? Дальше менять их сможет только мастер."))return;sv(Object.assign({},c,{locked:true,lockedSkills:Object.assign({},c.skills)}))}}>Принять</button>}
+{hasUnlocked&&<button className="btn main" onClick={function(){if(!window.confirm("Зафиксировать потраченные очки навыков? Вернуть их после этого будет нельзя."))return;sv(Object.assign({},c,{lockedSkills:Object.assign({},c.skills)}))}}>Зафиксировать</button>}
+{isGM&&<span className="pill">{c.locked?"принят игроком":"черновик"}</span>}
+{isGM&&c.locked&&<button className="btn sm" onClick={function(){sv(Object.assign({},c,{locked:false}))}}>Вернуть в черновик</button>}
+</div>
+</div>)}
+
+export default SkillsTab;

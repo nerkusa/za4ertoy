@@ -45,7 +45,7 @@ function applyDmgToNpc(npc,rawDmg,dmgType,zoneName,saveSpawnedFn,spawnedAll,npcI
   var ae;
   if(ignArmor){
     /* Голова/Пах игнорируют броню полностью */
-    ae={ad:0,hd:multiplied,desc:"🔓 "+z.name+" ×"+z.mult+" (игнор брони) → HP−"+multiplied};
+    ae={ad:0,hd:multiplied,desc:"мимо брони: "+z.name+" ×"+z.mult+" (игнор брони) → HP−"+multiplied};
   } else {
     ae=calcAE(armorType,dmgType,multiplied);
   }
@@ -62,8 +62,8 @@ function applyDmgToNpc(npc,rawDmg,dmgType,zoneName,saveSpawnedFn,spawnedAll,npcI
   saveSpawnedFn(sp);
   addLog({
     who:who,type:"dmg_npc",
-    label:"💥 "+npc.name+" ["+z.e+z.name+" ×"+z.mult+"] "+dmgType,
-    detail:ae.desc+(ae.ad>0?" | "+armorName+" "+armorHp+"→"+newArmorHp:"")+" | ❤️ "+curHp+"→"+newHp,
+    label:""+npc.name+" ["+z.e+z.name+" ×"+z.mult+"] "+dmgType,
+    detail:ae.desc+(ae.ad>0?" | "+armorName+" "+armorHp+"→"+newArmorHp:"")+" | Здоровье "+curHp+"→"+newHp,
     total:ae.hd
   });
   if(broadcast){broadcast({attackerName:who,srcLabel:srcLabel||"",npcName:npc.name,zone:z.name,zoneE:z.e,zoneMult:z.mult,dmgType:dmgType,dmg:ae.hd,oldHp:curHp,newHp:newHp,desc:ae.desc,ts:Date.now()});}

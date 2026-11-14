@@ -40,6 +40,7 @@ var _ini=useState(null);var initiative=_ini[0];var sInitiative=_ini[1];
 var _chat=useState([]);var chat=_chat[0];var sChat=_chat[1];
 var _gml=useState([]);var gmLog=_gml[0];var sGmLog=_gml[1];
 var _trt=useState(null);var traitsData=_trt[0];var sTraitsData=_trt[1];
+/* setTraits/setProfs вызываются до рендера детей: каталог эффектов нужен cF */
 useEffect(function(){if(!room)return;sLoaded(false);
 /* Чистим pendingAttacks старше 1 часа */
 get(ref(db,"rooms/"+room+"/pendingAttacks")).then(function(snap){
@@ -111,17 +112,17 @@ var _sd=useState(false);var showDonate=_sd[0];var sShowDonate=_sd[1];var _sb2=us
 if(!auth)return <Login onAuth={handleAuth}/>;
 var ca=Object.entries(chars).map(function(e){return Object.assign({},e[1],{_fbId:e[0]})});
 setProfs(profsData);setTraits(traitsData);
-return(<div style={{fontFamily:"'Inter',sans-serif",color:"var(--color-text)",background:"var(--color-bg)",height:"100vh",width:"100%",display:"flex",flexDirection:"column",overflow:"hidden"}}><style>{CSS}</style>
+return(<div className="zc-app"><style>{CSS}</style>
 {showDonate&&<DonatePage onClose={function(){sShowDonate(false)}} isGM={isGM} saveMap={saveMap} mapData={mapData}/>}
 {isGM&&<NpcHitPopup events={npcHits} onClear={clearNpcHit}/>}
-<div style={{display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",rowGap:6,padding:"10px 16px",borderBottom:"1px solid var(--color-divider)",gap:8,flexShrink:0}}>
-<span style={{fontFamily:"'Inter',sans-serif",fontWeight:600,fontSize:14,whiteSpace:"nowrap"}}>За Чертой · 2035</span>
-<div style={{display:"flex",gap:6,alignItems:"center",flexWrap:"wrap"}}>
-<button onClick={function(){sShowDonate(true)}} className="n-btn n-btn-secondary" style={{padding:"5px 10px",fontSize:11}}>💰 Донат</button>
-<span className="n-tag" style={{background:isGM?"rgba(124,58,237,.16)":"rgba(145,132,217,.14)",color:isGM?"#a78bfa":"var(--color-accent)",whiteSpace:"nowrap"}}>{(isGM?"🎭 ГМ · ":"👤 ")+auth.login}</span>
-<button onClick={leave} className="n-btn" style={{color:"#ef4444",padding:"5px 8px",fontSize:11}}>Выйти</button>
+<div className="zc-top">
+<span><b>За Чертой</b> · 2035 · {isGM?"мастер":"лист игрока"}</span>
+<div className="tb" style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap"}}>
+<span>{auth.login}</span>
+<button onClick={function(){sShowDonate(true)}} className="chip">Донат</button>
+<button onClick={leave} className="chip">Выйти</button>
 </div>
 </div>
-{isGM?<GMPanel characters={ca} saveChar={saveChar} deleteChar={deleteChar} lore={lore} saveLore={saveLore} logs={logs} addLog={addLog} clearLogs={clearLogs} chat={chat} sendChat={sendChat} clearChat={clearChat} myName={auth.login} mapData={mapData} saveMap={saveMap} npcTempl={npcTempl} saveNpcTempl={saveNpcTempl} spawned={spawned} saveSpawned={saveSpawned} roomCode={room} pendAtk={pendAtk} savePendingAttack={savePendingAttack} clearPendingAttack={clearPendingAttack} showBest={showBestApp} setShowBest={sShowBestApp} saveNpcHit={saveNpcHit} shop={shop} saveShop={saveShop} initiative={initiative} saveInitiative={saveInitiative} profs={profsData} saveProfs={saveProfs} traits={traitsData} saveTraits={saveTraits} gmLog={gmLog} addGmLog={addGmLog} clearGmLog={clearGmLog}/>:(function(){var my=ca.find(function(c){return c._fbId===pId});if(!my)return <div style={{padding:20,textAlign:"center"}}><div style={{fontFamily:"'Inter',sans-serif",fontSize:16,fontWeight:700}}>⏳ Подключение...</div></div>;return <GameView char={my} save={function(d){saveChar(pId,d)}} isGM={false} logs={logs} addLog={addLog} chat={chat} sendChat={sendChat} lore={lore} mapData={mapData} saveMap={saveMap} characters={ca} spawned={spawned} saveSpawned={saveSpawned} pendAtk={pendAtk} clearPendingAttack={clearPendingAttack} savePendingAttack={savePendingAttack} room={room} dmgEvents={dmgEvents} clearDmgEvent={clearDmgEvent} saveNpcHit={saveNpcHit} shop={shop} initiative={initiative} saveInitiative={saveInitiative} changeAccount={changeAccount} traits={traitsData}/>})()}
+{isGM?<GMPanel characters={ca} saveChar={saveChar} deleteChar={deleteChar} lore={lore} saveLore={saveLore} logs={logs} addLog={addLog} clearLogs={clearLogs} chat={chat} sendChat={sendChat} clearChat={clearChat} myName={auth.login} mapData={mapData} saveMap={saveMap} npcTempl={npcTempl} saveNpcTempl={saveNpcTempl} spawned={spawned} saveSpawned={saveSpawned} roomCode={room} pendAtk={pendAtk} savePendingAttack={savePendingAttack} clearPendingAttack={clearPendingAttack} showBest={showBestApp} setShowBest={sShowBestApp} saveNpcHit={saveNpcHit} shop={shop} saveShop={saveShop} initiative={initiative} saveInitiative={saveInitiative} profs={profsData} saveProfs={saveProfs} traits={traitsData} saveTraits={saveTraits} gmLog={gmLog} addGmLog={addGmLog} clearGmLog={clearGmLog}/>:(function(){var my=ca.find(function(c){return c._fbId===pId});if(!my)return <div style={{padding:20,textAlign:"center",color:"#cfc6b2"}}>Подключение…</div>;return <GameView char={my} save={function(d){saveChar(pId,d)}} isGM={false} logs={logs} addLog={addLog} chat={chat} sendChat={sendChat} lore={lore} mapData={mapData} saveMap={saveMap} characters={ca} spawned={spawned} saveSpawned={saveSpawned} pendAtk={pendAtk} clearPendingAttack={clearPendingAttack} savePendingAttack={savePendingAttack} room={room} dmgEvents={dmgEvents} clearDmgEvent={clearDmgEvent} saveNpcHit={saveNpcHit} shop={shop} initiative={initiative} saveInitiative={saveInitiative} changeAccount={changeAccount} traits={traitsData} addGmLog={addGmLog}/>})()}
 </div>)}
 

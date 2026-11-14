@@ -30,21 +30,21 @@ return(<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.55)",displ
 
 {rolling
 ?<div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:14}}>
-  <div style={{width:84,height:84,borderRadius:16,background:"radial-gradient(circle at 50% 40%,var(--color-accent-2),var(--color-accent) 70%)",display:"flex",alignItems:"center",justifyContent:"center",boxShadow:"0 0 40px rgba(145,132,217,.55)",animation:"diceSpin 0.65s linear infinite"}}>
-    <span style={{fontFamily:"'Inter',sans-serif",fontSize:34,fontWeight:900,color:"#161826"}}>{spin}</span>
+  <div style={{width:84,height:84,borderRadius:0,background:"radial-gradient(circle at 50% 40%,var(--color-accent-2),var(--color-accent) 70%)",display:"flex",alignItems:"center",justifyContent:"center",boxShadow:"0 0 40px rgba(138,59,34,.55)",animation:"diceSpin 0.65s linear infinite"}}>
+    <span style={{fontFamily:"var(--f-body)",fontSize:34,fontWeight:700,color:"#ebe3d1"}}>{spin}</span>
   </div>
   <div style={{fontSize:12,color:"var(--color-text-muted)",fontWeight:600,letterSpacing:.05}}>{r.label}</div>
 </div>
-:<div onClick={function(e){e.stopPropagation()}} style={{background:isDmg?"linear-gradient(135deg,#2a1414,#311717)":iC?"linear-gradient(135deg,#231b08,#3a2c0c)":iF?"linear-gradient(135deg,#311717,#3a1c1c)":"linear-gradient(135deg,#232532,#1b1d29)",border:isDmg?"3px solid #ef4444":iC?"3px solid #f59e0b":iF?"3px solid #ef4444":"3px solid #34374a",borderRadius:16,padding:"16px 22px",textAlign:"center",minWidth:240,maxWidth:350,boxShadow:"0 20px 60px rgba(0,0,0,0.3)",animation:iC?"critPop 0.4s":"popIn 0.3s"}}>
-<div style={{fontSize:12,color:"#9397ab",fontWeight:700,marginBottom:r.subtext?6:4}}>{r.label}</div>
-{r.subtext&&<div style={{fontSize:12,color:"#c084fc",fontWeight:600,fontStyle:"italic",marginBottom:10,padding:"5px 9px",background:"rgba(192,132,252,.1)",borderRadius:7,borderLeft:"3px solid #c084fc",textAlign:"left",whiteSpace:"pre-line"}}>{"💬 "+r.subtext}</div>}
-<div style={{background:"#232532",border:"2px solid #34374a",borderRadius:10,padding:"8px 10px",marginBottom:8,position:"relative"}}>
-{iC&&!isDmg&&<div style={{position:"absolute",inset:0,borderRadius:10,background:"radial-gradient(circle,rgba(245,158,11,.25),transparent 70%)",animation:"critFlash 0.5s ease-out"}}/>}
-<div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:4,flexWrap:"wrap",position:"relative"}}>{!isDmg&&<span style={{display:"flex",alignItems:"center",gap:3,fontFamily:"'Inter',sans-serif",fontSize:20,fontWeight:900,color:iC?"#d97706":iF?"#dc2626":"#3b82f6"}}><IconD10 size={18}/>{r.d10}</span>}{(r.parts||[]).map(function(pt,i){return <span key={i} style={{display:"flex",alignItems:"center",gap:2}}><span style={{color:"#9397ab",fontSize:13}}>+</span><span style={{background:"#2b2e40",borderRadius:5,padding:"2px 6px",textAlign:"center"}}><span style={{color:"#9397ab",fontSize:7,display:"block"}}>{pt.label}</span><span style={{fontFamily:"'Inter',sans-serif",fontSize:13,fontWeight:700}}>{pt.value}</span></span></span>})}</div>
+:<div onClick={function(e){e.stopPropagation()}} style={{background:isDmg?"linear-gradient(135deg,#efe2d6,#efe2d6)":iC?"linear-gradient(135deg,#f0e2b8,#f0e2b8)":iF?"linear-gradient(135deg,#efe2d6,#efe2d6)":"linear-gradient(135deg,#e2d8c3,#f1ead9)",border:isDmg?"3px solid #8a3b22":iC?"3px solid #8a6200":iF?"3px solid #8a3b22":"3px solid #c6bba3",borderRadius:0,padding:"16px 22px",textAlign:"center",minWidth:240,maxWidth:350,boxShadow:"0 20px 60px rgba(0,0,0,0.3)",animation:iC?"critPop 0.4s":"popIn 0.3s"}}>
+<div style={{fontSize:12,color:"#6a6052",fontWeight:700,marginBottom:r.subtext?6:4}}>{r.label}</div>
+{r.subtext&&<div style={{fontSize:12,color:"#8a3b22",fontWeight:600,fontStyle:"italic",marginBottom:10,padding:"5px 9px",background:"rgba(138,59,34,.1)",borderRadius:0,borderLeft:"3px solid #8a3b22",textAlign:"left",whiteSpace:"pre-line"}}>{r.subtext}</div>}
+<div style={{background:"#e2d8c3",border:"2px solid #c6bba3",borderRadius:0,padding:"8px 10px",marginBottom:8,position:"relative"}}>
+{iC&&!isDmg&&<div style={{position:"absolute",inset:0,borderRadius:0,background:"radial-gradient(circle,rgba(233,177,43,.25),transparent 70%)",animation:"critFlash 0.5s ease-out"}}/>}
+<div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:4,flexWrap:"wrap",position:"relative"}}>{!isDmg&&<span style={{display:"flex",alignItems:"center",gap:3,fontFamily:"var(--f-body)",fontSize:20,fontWeight:700,color:iC?"#8a6200":iF?"#8a3b22":"#4f5b2a"}}><IconD10 size={18}/>{r.d10}</span>}{(r.parts||[]).map(function(pt,i){return <span key={i} style={{display:"flex",alignItems:"center",gap:2}}><span style={{color:"#6a6052",fontSize:13}}>+</span><span style={{background:"#d8cdb4",borderRadius:0,padding:"2px 6px",textAlign:"center"}}><span style={{color:"#6a6052",fontSize:10,display:"block"}}>{pt.label}</span><span style={{fontFamily:"var(--f-body)",fontSize:13,fontWeight:700}}>{pt.value}</span></span></span>})}</div>
 </div>
-<div style={{fontFamily:"'Inter',sans-serif",fontSize:30,fontWeight:900,color:isDmg?"#dc2626":iC?"#d97706":iF?"#dc2626":"#e9e9ed"}}>{"= "+r.total}</div>
-{iC&&<div style={{fontSize:13,color:"#d97706",fontWeight:700}}>🌟 КРИТ!</div>}{iF&&<div style={{fontSize:13,color:"#dc2626",fontWeight:700}}>💀 ПРОВАЛ!</div>}
-<button onClick={p.onClose} style={{marginTop:10,padding:"4px 18px",borderRadius:6,border:"2px solid #34374a",background:"#1b1d29",fontWeight:700,fontSize:11,cursor:"pointer"}}>OK</button>
+<div style={{fontFamily:"var(--f-body)",fontSize:30,fontWeight:700,color:isDmg?"#8a3b22":iC?"#8a6200":iF?"#8a3b22":"#211d18"}}>{"= "+r.total}</div>
+{iC&&<div style={{fontSize:13,color:"#8a6200",fontWeight:700}}>КРИТ</div>}{iF&&<div style={{fontSize:13,color:"#8a3b22",fontWeight:700}}>СРЫВ!</div>}
+<button onClick={p.onClose} style={{marginTop:10,padding:"4px 18px",borderRadius:0,border:"2px solid #c6bba3",background:"#f1ead9",fontWeight:700,fontSize:11,cursor:"pointer"}}>OK</button>
 </div>}
 </div>)}
 

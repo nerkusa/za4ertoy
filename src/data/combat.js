@@ -1,4 +1,4 @@
-var ZONES=[{r:1,name:"Голова",mult:3,e:"🧠",slot:"head",ignoreArmor:false},{r:2,name:"Шея",mult:2,e:"🫁",slot:"head",ignoreArmor:false},{r:3,name:"Торс",mult:1,e:"🫀",slot:"body",ignoreArmor:false},{r:4,name:"Руки",mult:1,e:"💪",slot:"body",ignoreArmor:false},{r:5,name:"Пах",mult:2,e:"⚠️",slot:"body",ignoreArmor:true},{r:6,name:"Ноги",mult:1,e:"🦵",slot:"body",ignoreArmor:false}];
+var ZONES=[{r:1,name:"Голова",mult:3,e:"",slot:"head",ignoreArmor:false},{r:2,name:"Шея",mult:2,e:"",slot:"head",ignoreArmor:false},{r:3,name:"Торс",mult:1,e:"",slot:"body",ignoreArmor:false},{r:4,name:"Руки",mult:1,e:"",slot:"body",ignoreArmor:false},{r:5,name:"Пах",mult:2,e:"",slot:"body",ignoreArmor:true},{r:6,name:"Ноги",mult:1,e:"",slot:"body",ignoreArmor:false}];
 /* penalty: штрафы «если экипировано». bodyDodge/headDodge — к Уклонению
    (складываются в навык, действуют на все броски уклонения). bodyDodgeGate —
    штраф к корпусной броне действует, только если BODY у персонажа ≤ значения
@@ -39,7 +39,7 @@ function armorPenaltyOf(c,finalStats){
   var head=armors.find(function(a){return a.id===c.equippedHead});
   var body=armors.find(function(a){return a.id===c.equippedBody});
   if(head){var ht=ARMOR_T.find(function(a){return a.id===head.type});if(ht&&ht.penalty){out.dodge-=ht.penalty.headDodge||0;out.atk-=ht.penalty.headAtk||0;}}
-  if(body){var bt=ARMOR_T.find(function(a){return a.id===body.type});if(bt&&bt.penalty){var gate=bt.penalty.bodyDodgeGate;var bodyStat=(finalStats&&finalStats.BODY)||0;if(!gate||bodyStat<=gate)out.dodge-=bt.penalty.bodyDodge||0;}}
+  if(body){var bt=ARMOR_T.find(function(a){return a.id===body.type});if(bt&&bt.penalty){var gate=bt.penalty.bodyDodgeGate;var bodyStat=(finalStats&&finalStats.telo)||0;if(!gate||bodyStat<=gate)out.dodge-=bt.penalty.bodyDodge||0;}}
   var shields=c.shields||[];var sh=shields.find(function(s){return s.id===c.equippedShield});
   if(sh){var st=SHIELD_T.find(function(s){return s.id===sh.type});if(st)out.dodge-=st.dodgePen||0;}
   return out;

@@ -7,8 +7,8 @@ LORE_CH.forEach(function (c) { LEGACY[c.id] = c; });
 export const MAP_META = LORE_CH.find(function (c) { return c.id === 'map'; })
   || { id: 'map', title: 'Карта', icon: '§', color: '#4f5b2a' };
 
-export const LORE_COLORS = ['#10b981', '#3b82f6', '#8b5cf6', '#f59e0b', '#ef4444', '#06b6d4', '#f97316', '#d97706', '#7c3aed', '#ec4899', '#64748b'];
-export const LORE_ICONS = ['📖', '📜', '👥', '🛒', '🌍', '🏰', '🌊', '🧝', '⛏️', '🌙', '🐎', '🐉', '⚡', '💀', '⚔️', '👑', '🔮', '🗡️', '🛡️', '🏔️', '🌲', '🔥', '❄️', '🏛️'];
+export const LORE_COLORS = ['#3f6b34', '#4f5b2a', '#8a3b22', '#8a6200', '#8a3b22', '#4f5b2a', '#8a6200', '#8a6200', '#8a3b22', '#6b2f4a', '#6a6052'];
+export const LORE_ICONS = ['§', '¶', '№', '†', '‡', '※', '◆', '■', '▲', '●', '✦', '✕'];
 
 let _c = 0;
 export function makeId() {
@@ -16,7 +16,7 @@ export function makeId() {
 }
 
 export function newSection(order) {
-  return { id: makeId(), title: 'Новый раздел', icon: '📖', color: '#8b5cf6', blocks: [{ type: 'text', value: '' }], order: order || 0 };
+  return { id: makeId(), title: 'Новый раздел', icon: '§', color: '#8a3b22', blocks: [{ type: 'text', value: '' }], order: order || 0 };
 }
 
 // returns a normalized, sorted array of sections from any lore shape (new or legacy)
@@ -28,8 +28,8 @@ export function normalizeSections(lore) {
       return {
         id: id,
         title: s.title || 'Без названия',
-        icon: s.icon || '📖',
-        color: s.color || '#8b5cf6',
+        icon: s.icon || '§',
+        color: s.color || '#8a3b22',
         blocks: Array.isArray(s.blocks) ? s.blocks : (s.body ? [{ type: 'text', value: s.body }] : []),
         order: typeof s.order === 'number' ? s.order : 0,
       };
@@ -44,8 +44,8 @@ export function normalizeSections(lore) {
       return {
         id: k,
         title: meta.title || k,
-        icon: meta.icon || '📖',
-        color: meta.color || '#8b5cf6',
+        icon: meta.icon || '§',
+        color: meta.color || '#8a3b22',
         blocks: [{ type: 'text', value: lore[k] }],
         order: idx < 0 ? 999 : idx,
       };

@@ -51,7 +51,7 @@ function Avatar(ap){
   var portrait=(ch&&ch.portrait)||(npcMatch&&npcMatch.avatar);
   var initial=((ch&&ch.name)||(npcMatch&&npcMatch.name)||ap.name||"?")[0];
   var sz=ap.size||28;
-  return(<div style={{width:sz,height:sz,borderRadius:"50%",flexShrink:0,background:portrait?"none":(isGM?"linear-gradient(135deg,#7c3aed,#a78bfa)":isNpc?"linear-gradient(135deg,#ef4444,#f59e0b)":"linear-gradient(135deg,var(--color-accent-2),var(--color-accent))"),display:"flex",alignItems:"center",justifyContent:"center",fontSize:Math.round(sz*0.42),fontWeight:700,color:"#161826",overflow:"hidden"}}>{portrait?<img src={portrait} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>:initial}</div>)
+  return(<div style={{width:sz,height:sz,borderRadius:"50%",flexShrink:0,background:portrait?"none":(isGM?"linear-gradient(135deg,#8a3b22,#8a3b22)":isNpc?"linear-gradient(135deg,#8a3b22,#8a6200)":"linear-gradient(135deg,var(--color-accent-2),var(--color-accent))"),display:"flex",alignItems:"center",justifyContent:"center",fontSize:Math.round(sz*0.42),fontWeight:700,color:"#ebe3d1",overflow:"hidden"}}>{portrait?<img src={portrait} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>:initial}</div>)
 }
 
 useEffect(function(){
@@ -73,7 +73,7 @@ function doRoll(){
   var skillVal=(rollSkill&&es)?(es[rollSkill]||0):0;
   var bonus=parseInt(rollBonus)||0;
   var R=rollHit();var d=R.d;var t=d+statVal+skillVal+bonus;
-  var myDetail="d10("+d+") + "+rollStat+"("+statVal+")"+(skillObj?" + "+skLabel(skillObj.name)+"("+skillVal+")":"")+(bonus?" + бонус("+bonus+")":"")+(R.crit?" 🌟КРИТ":R.fumble?" 💀ПРОВАЛ":"");
+  var myDetail="d10("+d+") + "+rollStat+"("+statVal+")"+(skillObj?" + "+skLabel(skillObj.name)+"("+skillVal+")":"")+(bonus?" + бонус("+bonus+")":"")+(R.crit?" крит":R.fumble?" срыв":"");
   var myParts=[{label:rollStat,value:statVal}].concat(skillObj?[{label:skLabel(skillObj.name),value:skillVal}]:[]).concat(bonus?[{label:"Бонус",value:bonus}]:[]);
 
   if(partner){
@@ -82,10 +82,10 @@ function doRoll(){
     var pSkillObj=skillsForStat2.find(function(s){return s.name===rollSkill2});
     var pSkillVal=(rollSkill2&&pes)?(pes[rollSkill2]||0):0;
     var R2=rollHit();var d2=R2.d;var t2=d2+pStatVal+pSkillVal;
-    var pDetail="d10("+d2+") + "+rollStat2+"("+pStatVal+")"+(pSkillObj?" + "+skLabel(pSkillObj.name)+"("+pSkillVal+")":"")+(R2.crit?" 🌟КРИТ":R2.fumble?" 💀ПРОВАЛ":"");
+    var pDetail="d10("+d2+") + "+rollStat2+"("+pStatVal+")"+(pSkillObj?" + "+skLabel(pSkillObj.name)+"("+pSkillVal+")":"")+(R2.crit?" крит":R2.fumble?" срыв":"");
     var pParts=[{label:rollStat2,value:pStatVal}].concat(pSkillObj?[{label:skLabel(pSkillObj.name),value:pSkillVal}]:[]);
     var coopLabel=(skillObj?skLabel(skillObj.name):statObj.full)+" + "+(pSkillObj?skLabel(pSkillObj.name):pStatObj.full);
-    var logLabel="🤝 Совместное действие · "+coopLabel+" · "+who+" & "+(partner.name||"?");
+    var logLabel="Совместное действие · "+coopLabel+" · "+who+" & "+(partner.name||"?");
     var detail=(actDesc.trim()?actDesc.trim()+"\n":"")+who+": "+myDetail+"\n"+(partner.name||"?")+": "+pDetail;
     if(pr.addLog)pr.addLog({who:who,type:"skill",label:logLabel,detail:detail,total:t+t2});
     if(pr.onCoopRoll)pr.onCoopRoll({label:coopLabel,desc:actDesc.trim()||undefined,a:{name:who,d10:d,crit:R.crit,fumble:R.fumble,parts:myParts,total:t},b:{name:partner.name||"?",d10:d2,crit:R2.crit,fumble:R2.fumble,parts:pParts,total:t2}});
@@ -106,7 +106,7 @@ return(<div style={{display:"flex",flexDirection:"column",height:"100%",minHeigh
   if(it.kind==="roll")return(<div key={i} style={{display:"flex",gap:8,alignSelf:"flex-start",maxWidth:"88%",alignItems:"flex-end"}}>
     <Avatar name={it.who}/>
     <div className="n-roll-card" style={{flex:1,minWidth:0}}>
-      <div style={{display:"flex",alignItems:"center",gap:6,fontSize:11,fontWeight:600,color:"var(--color-accent)",marginBottom:4}}><IconD10 size={13}/> {it.label}{it.who&&<span style={{color:"var(--color-text-muted)",fontWeight:400}}>{" · "+it.who}</span>}<span style={{marginLeft:"auto",fontSize:9,color:"var(--color-text-muted)",fontWeight:400}}>{fmtYkt(it.ts)}</span></div>
+      <div style={{display:"flex",alignItems:"center",gap:6,fontSize:11,fontWeight:600,color:"var(--color-accent)",marginBottom:4}}><IconD10 size={13}/> {it.label}{it.who&&<span style={{color:"var(--color-text-muted)",fontWeight:400}}>{" · "+it.who}</span>}<span style={{marginLeft:"auto",fontSize:11,color:"var(--color-text-muted)",fontWeight:400}}>{fmtYkt(it.ts)}</span></div>
       {it.detail&&<div style={{fontSize:11,color:"var(--color-text-muted)",fontFamily:"monospace",whiteSpace:"pre-line",marginBottom:it.total?2:0}}>{it.detail}</div>}
       {(it.total!==undefined&&it.total!==0)&&<div style={{fontSize:20,fontWeight:700}}>{it.total}</div>}
     </div>
@@ -117,7 +117,7 @@ return(<div style={{display:"flex",flexDirection:"column",height:"100%",minHeigh
     <div className={"n-msg "+(self?"n-msg-self":"n-msg-other")} style={{maxWidth:"100%"}}>
       {!self&&<span className="n-msg-who">{it.who}</span>}
       <span>{it.text}</span>
-      <div style={{fontSize:9,color:"var(--color-text-muted)",marginTop:3,textAlign:self?"right":"left"}}>{fmtYkt(it.ts)}</div>
+      <div style={{fontSize:11,color:"var(--color-text-muted)",marginTop:3,textAlign:self?"right":"left"}}>{fmtYkt(it.ts)}</div>
     </div>
   </div>);
 })}

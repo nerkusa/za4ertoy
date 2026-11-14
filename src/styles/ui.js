@@ -1,9 +1,9 @@
 var S={
-lb:{display:"block",fontSize:10,fontWeight:600,color:"#9397ab",marginBottom:4,textTransform:"uppercase",letterSpacing:0.5},
-inp:{width:"100%",padding:"8px 10px",border:"1.5px solid #34374a",borderRadius:8,fontSize:13,fontFamily:"'Inter',sans-serif",background:"#1b1d29",color:"#e9e9ed",outline:"none"},
-sm:{width:24,height:24,border:"1.5px solid #34374a",borderRadius:6,background:"#1b1d29",cursor:"pointer",fontSize:11,fontWeight:700,display:"flex",alignItems:"center",justifyContent:"center",color:"#9397ab"},
-ab:{padding:"5px 10px",borderRadius:6,cursor:"pointer",fontSize:11,fontFamily:"'Inter',sans-serif",fontWeight:600},
-bud:{border:"1.5px solid",borderRadius:8,padding:"6px 10px",display:"flex",justifyContent:"space-between",alignItems:"center"}
+lb:{display:"block",fontSize:10,fontFamily:"var(--f-mono)",color:"#6a6052",marginBottom:4,textTransform:"uppercase",letterSpacing:1},
+inp:{width:"100%",padding:"6px 8px",border:"1px solid #211d18",borderRadius:0,fontSize:14,fontFamily:"var(--f-body)",background:"#ebe3d1",color:"#211d18",outline:"none"},
+sm:{width:26,height:26,border:"1px solid #211d18",borderRadius:0,background:"#ebe3d1",cursor:"pointer",fontSize:13,fontFamily:"var(--f-mono)",display:"flex",alignItems:"center",justifyContent:"center",color:"#211d18",padding:0},
+ab:{padding:"5px 10px",borderRadius:0,cursor:"pointer",fontSize:12,fontFamily:"var(--f-body)",fontWeight:700},
+bud:{border:"1px solid",borderRadius:0,padding:"6px 10px",display:"flex",justifyContent:"space-between",alignItems:"center"}
 };
 
 export { S };

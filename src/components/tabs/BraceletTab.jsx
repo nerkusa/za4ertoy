@@ -1,0 +1,126 @@
+import React, { useState } from 'react';
+import { cF } from '../../utils/character';
+import { getTraits } from '../../utils/traitStore';
+import { BRACELETS, NOISE, IMPRINT_STAGES, CASS_KINDS, kindName } from '../../data/gear';
+import { findBy, nestInfo, canInsert, solutionList, cassEffects, hasTablet } from '../../data/traits';
+import { fakeOutcome, slepCheck, slepDC, inCombat } from '../../utils/gearFx';
+import { patchFromShopItem } from '../../utils/gearOps';
+import { tryPay } from '../../utils/currency';
+import { r1 } from '../../utils/dice';
+import { stName } from '../../data/stats';
+import ShopPicker from '../ShopPicker';
+
+function effText(effs){return (effs||[]).map(function(e){if(e.type==="stat_bonus")return "+"+e.amount+" "+stName(e.stat);if(e.type==="skill_bonus")return (e.amount>0?"+":"")+e.amount+" "+e.skill;if(e.type==="hp_flat")return (e.amount>0?"+":"")+e.amount+" Здоровье";return null}).filter(Boolean).join(", ")}
+
+/* Вкладка «Браслет»: MG+ mind glider, гнёзда и кассеты. */
+function BraceletTab(pr){
+var c=pr.char;var sv=pr.save;var gm=!!pr.isGM;var cat=getTraits();var inf=cF(c);
+var _n=useState(false);var showNoise=_n[0];var sShowNoise=_n[1];
+var fighting=inCombat(pr.initiative,c._fbId)&&!gm;
+var tablet=hasTablet(c);
+var b=c.bracelet&&BRACELETS[c.bracelet.model]?BRACELETS[c.bracelet.model]:null;
+var ni=nestInfo(c,cat);var cass=c.cassettes||[];
+var who=c.name||"???";
+function log(e){if(pr.addLog)pr.addLog(Object.assign({who:who,total:0,detail:""},e))}
+function gmLog(label,detail){if(pr.addGmLog)pr.addGmLog({who:who,target:who,label:label,detail:detail||""})}
+function upd(id,patch){sv(Object.assign({},c,{cassettes:cass.map(function(x){return x.id===id?Object.assign({},x,patch):x})}))}
+function shownKind(x){return (!gm&&x.kind==="fake")?"orig":x.kind}
+function insert(x){
+  if(fighting){alert("В бою кассеты не меняют");return}
+  var chk=canInsert(c,x,cat);if(!chk.ok){alert(chk.reason);return}
+  var def=findBy(cat.cassettes,x.key)||{name:x.key};
+  var patch={inNest:true};
+  if(x.kind==="fake"){
+    var d=r1(10);var out=fakeOutcome(d);patch.fakeState=out;
+    gmLog("Палёнка «"+def.name+"» вставлена","скрытый d10 = "+d+": "+(out==="silent"?"молчит":out==="copy"?"работает как копия":"шум и застряла"));
+    if(out==="stuck"){var n=r1(10);patch.stuck=true;setTimeout(function(){log({type:"noise",label:"Шум кассеты «"+def.name+"» ("+n+")",detail:NOISE[n-1]+" · кассета застряла"})},10)}
+  }
+  upd(x.id,patch);
+  log({type:"gear",label:"Вставил кассету «"+def.name+"»"});
+}
+function eject(x){
+  if(fighting){alert("В бою кассеты не меняют");return}
+  if(x.stuck&&!gm){alert("Кассета застряла — не вынимается до отдыха");return}
+  var def=findBy(cat.cassettes,x.key)||{name:x.key};
+  upd(x.id,{inNest:false,stuck:false});
+  log({type:"gear",label:"Вынул кассету «"+def.name+"»"});
+}
+function stability(x){
+  var def=findBy(cat.cassettes,x.key)||{name:x.key};var d=r1(10);var res=slepCheck(c,inf,x.id,d);
+  upd(x.id,{imprint:res.imprint});
+  log({type:"skill",label:"Стойкость слепка «"+def.name+"» — "+(res.ok?"устоял":"провал"),detail:"d10("+d+") + Воля + Выдержка"+(res.others?" − 2×"+res.others+" (другие слепки)":"")+" = "+res.total+(gm||tablet?" против СЛ "+res.dc:""),total:res.total});
+  if(!res.ok)gmLog("Слепок «"+def.name+"»: Отпечаток +1","теперь "+res.imprint+" — "+IMPRINT_STAGES[res.imprint]);
+  if(pr.onRoll)pr.onRoll({label:"Стойкость слепка",d10:d,parts:[{label:"Воля",value:inf.fs.volya||0},{label:"Выдержка",value:inf.eSk["Выдержка"]||0}].concat(res.others?[{label:"Слепки",value:-2*res.others}]:[]),total:res.total,subtext:res.ok?"Устоял":"Провал — плёнка берёт своё"});
+}
+function buy(it){var pay=tryPay(c,it.price);if(pay===null)return;var p=patchFromShopItem(c,cat,it);if(p.error){alert(p.error);return}sv(Object.assign({},c,pay,p));log({type:"gear",label:"Купил: "+it.name})}
+
+function CassCard(x,inNest){
+  var def=findBy(cat.cassettes,x.key);if(!def)def={name:x.key,cls:"?",cap:0,effects:[],text:"нет в каталоге"};
+  var kind=shownKind(x);var chk=inNest?null:canInsert(c,x,cat);
+  var showImp=x.kind==="slep"&&(gm||tablet);
+  var eff=effText(cassEffects(Object.assign({},x,{kind:kind}),def));
+  return(<div key={x.id} className={"nest"+(inNest?"":" ")} style={inNest?null:{minHeight:0}}>
+    <span className="n">{def.cls+" · "+(x.kind==="slep"?128:def.cap)}</span>
+    <b>{def.name}</b>
+    <span><span className={"kind "+kind}>{kindName(kind)}</span>{gm&&x.kind==="fake"&&<span className="kind slep" style={{marginLeft:4}}>{"палёнка"+(x.fakeState?": "+(x.fakeState==="silent"?"молчит":x.fakeState==="copy"?"как копия":"застряла"):"")}</span>}</span>
+    {eff&&<span className="e">{eff}</span>}
+    {def.text&&<span className="t">{def.text}</span>}
+    {x.stuck&&<span className="t" style={{color:"#e07a5a"}}>застряла</span>}
+    {x.dead&&<span className="t" style={{color:"#e07a5a"}}>испорчена</span>}
+    {x.muted&&<span className="t" style={{color:"#e07a5a"}}>молчит до конца сцены</span>}
+    {showImp&&<span className="t">{"Отпечаток "+(x.imprint||0)+" · "+IMPRINT_STAGES[x.imprint||0]}<span className="imp" style={{marginTop:3}}>{[1,2,3,4,5].map(function(i){return <i key={i} className={(x.imprint||0)>=i?"on":""}/>})}</span></span>}
+    {x.kind==="slep"&&inNest&&<button className="btn sm" onClick={function(){stability(x)}}>{"Стойкость"+(gm||tablet?" · СЛ "+slepDC(x.imprint):"")}</button>}
+    {inNest
+      ?<button className="btn sm" disabled={fighting||(x.stuck&&!gm)} onClick={function(){eject(x)}}>Вынуть</button>
+      :<button className="btn sm" disabled={fighting||!chk.ok} title={chk.reason} onClick={function(){insert(x)}}>Вставить</button>}
+    {!inNest&&!chk.ok&&<span className="t" style={{color:"#f0d79a"}}>{chk.reason}</span>}
+    {gm&&<div style={{display:"flex",gap:4,flexWrap:"wrap",borderTop:"1px dashed #4a4236",paddingTop:5}}>
+      <select value={x.kind} onChange={function(e){upd(x.id,{kind:e.target.value,fakeState:null})}} style={{fontSize:12,padding:"2px 4px"}}>{CASS_KINDS.map(function(k){return <option key={k.id} value={k.id}>{k.name}</option>})}</select>
+      {x.kind==="slep"&&<React.Fragment><button className="btn sm" onClick={function(){upd(x.id,{imprint:Math.max(0,(x.imprint||0)-1)})}}>отп −</button><button className="btn sm" onClick={function(){upd(x.id,{imprint:Math.min(5,(x.imprint||0)+1)})}}>отп +</button></React.Fragment>}
+      <button className="btn sm" onClick={function(){upd(x.id,{stuck:!x.stuck})}}>{x.stuck?"отлипла":"застряла"}</button>
+      <button className="btn sm" onClick={function(){upd(x.id,{muted:!x.muted})}}>{x.muted?"звучит":"молчит"}</button>
+      <button className="btn sm" onClick={function(){upd(x.id,{dead:!x.dead})}}>{x.dead?"цела":"испорчена"}</button>
+      <button className="btn sm" onClick={function(){if(window.confirm("Забрать кассету?"))sv(Object.assign({},c,{cassettes:cass.filter(function(k){return k.id!==x.id})}))}}>забрать</button>
+    </div>}
+  </div>);
+}
+
+var inN=cass.filter(function(x){return x.inNest});var outN=cass.filter(function(x){return !x.inNest});
+var sols=solutionList(c,cat).filter(function(x){return x.nest>0});
+var nestCells=[];
+if(b){
+  if(ni.blocked){for(var q=0;q<ni.total;q++)nestCells.push(<div key={"k"+q} className="nest limb"><span className="n">{"гнездо "+(q+1)}</span><b>Корпус</b></div>)}
+  else{
+    sols.forEach(function(s2,i){for(var k=0;k<s2.nest;k++)nestCells.push(<div key={"s"+i+"_"+k} className="nest limb"><span className="n">солюшн</span><b>{s2.name}</b></div>)});
+    inN.forEach(function(x){nestCells.push(CassCard(x,true))});
+    for(var f=0;f<ni.free;f++)nestCells.push(<div key={"e"+f} className="nest empty">пустое гнездо</div>);
+  }
+}
+return(<div style={{display:"flex",flexDirection:"column",gap:12}}>
+{!b&&<div className="warnbox">Браслета нет. Без MG+ mind glider кассеты не читаются.</div>}
+{b&&<div className="bracelet">
+  <div className="bhead">
+    <div><h3>MG+ mind glider</h3><span className="lblm">ct14inc · {"читает "+b.reads.join(", ")}</span></div>
+    <div className="bscreen">{b.name.toUpperCase()+" · "+ni.free+"/"+ni.total+" свободно"}</div>
+  </div>
+  {fighting&&<div className="warnbox">Идёт бой — кассеты менять нельзя.</div>}
+  <div className="nests">{nestCells}</div>
+  {ni.solutions+ni.cassettes>ni.total&&<div className="warnbox">Гнёзд меньше, чем занято: мастеру стоит проверить лист.</div>}
+</div>}
+{gm&&<div className="row"><span className="lblm">Модель браслета (мастер):</span>
+  <select value={(c.bracelet&&c.bracelet.model)||""} onChange={function(e){sv(Object.assign({},c,{bracelet:e.target.value?{model:e.target.value}:null}))}}><option value="">нет</option>{Object.keys(BRACELETS).map(function(m){return <option key={m} value={m}>{m+" · "+BRACELETS[m].nests+" гнёзд"}</option>})}</select>
+</div>}
+<div className="sec">
+  <h3>Кассетница</h3>
+  {outN.length===0&&<p className="hint">Свободных кассет нет.</p>}
+  {outN.length>0&&<div className="nests">{outN.map(function(x){return CassCard(x,false)})}</div>}
+  {!gm&&<ShopPicker color="#4f5b2a" label="Купить кассету или браслет" items={(pr.shop||[]).filter(function(i){return (i.cat==="cassette"||(i.cat==="solution"&&i.sol==="bracelet"))&&!i.notForSale})} sub={function(it){return it.desc||""}} onPick={buy}/>}
+</div>
+<div className="sec">
+  <div className="row" style={{justifyContent:"space-between"}}><h3>Таблица шумов</h3><button className="btn sm" onClick={function(){sShowNoise(!showNoise)}}>{showNoise?"Скрыть":"Показать"}</button></div>
+  <p className="hint">Срыв на броске навыка, усиленного копией или слепком, — шум. Результат пишется в лог, мастер применяет его сам.</p>
+  {showNoise&&<div className="log">{NOISE.map(function(n,i){return <div key={i} className="logrow" style={{gridTemplateColumns:"28px 1fr"}}><span className="tm">{i+1}</span><span>{n}</span></div>})}</div>}
+</div>
+</div>)}
+
+export default BraceletTab;
