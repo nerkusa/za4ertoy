@@ -99,14 +99,14 @@ function levelUpReward(level){return LEVEL_REWARDS[level]||LEVEL_REWARDS[10]}
 /* Случайные 6 характеристик и навыки под профессию и происхождение.
    Правил создания по очкам в книге пока нет — это только черновик для
    быстрого старта, числа потом правятся вручную. */
-/* Очки создания: 30 на характеристики (сверх стартовой единицы в каждой)
-   и 35 на навыки. */
-var STAT_POINTS=30,SKILL_POINTS=35;
+/* Очки создания: 20 на характеристики (сверх стартовой единицы в каждой)
+   и 25 на навыки, потолок на старте 8. Основной путь — utils/creation.js. */
+var STAT_POINTS=20,SKILL_POINTS=25;
 function statSpent(stats){return SD.reduce(function(a,s){return a+Math.max(0,((stats||{})[s.key]||1)-1)},0)}
 function skillSpent(skills){return uSkP(skills||{})}
 /* Потолок характеристики и навыка в черновике с учётом происхождения */
-function statCap(originId,k){var c=originOf(originId).caps||{};return c[k]||10}
-function skillCap(originId,n){var c=originOf(originId).startSkillCaps||{};return c[n]!==undefined?c[n]:10}
+function statCap(originId,k){var c=originOf(originId).caps||{};return Math.min(8,c[k]||8)}
+function skillCap(originId,n){var c=originOf(originId).startSkillCaps||{};return c[n]!==undefined?c[n]:8}
 function rndCore(pr,originId){
   var org=originOf(originId);var caps=org.caps||{};var skCaps=org.startSkillCaps||{};
   var st=iS();var keys=SD.map(function(s){return s.key});

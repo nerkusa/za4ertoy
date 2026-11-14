@@ -7,6 +7,7 @@ import { IRON_STAGES, doseState } from '../data/gear';
 import { ironSteps, hasTablet } from '../data/traits';
 import { inCombat } from '../utils/gearFx';
 import LiveField from './LiveField';
+import { yearsWord } from '../utils/creation';
 
 /* Шапка-досье: портрет, кличка, профессия, происхождение, бейджи и трекеры. */
 function Dossier(pr){
@@ -29,8 +30,8 @@ return(<div className="dossier">
 <div className="idblock">
   <div className="nameRow">
     {pr.onBack&&<button className="btn sm" onClick={pr.onBack}>К отряду</button>}
-    <LiveField className="nameInput" value={c.name||""} placeholder="Кличка" onCommit={function(val){sv(Object.assign({},c,{name:val}))}}/>
-    <span className="meta">{[pf.id!=="none"?pf.name:"без профессии",org.name,"опыт "+xpp.got+"/"+xpp.need].join(" · ")}</span>
+    {gm?<LiveField className="nameInput" value={c.name||""} placeholder="Кличка" onCommit={function(val){sv(Object.assign({},c,{name:val}))}}/>:<span className="nameInput">{c.name||"?"}</span>}
+    <span className="meta">{[pf.id!=="none"?pf.name:"без профессии",org.name+(c.age?", "+yearsWord(c.age):""),"опыт "+xpp.got+"/"+xpp.need].join(" · ")}</span>
   </div>
   <div className="badges">
     {c.bracelet&&c.bracelet.model?<span className="badge dark">{"MG+ "+c.bracelet.model}</span>:<span className="badge">браслета нет</span>}

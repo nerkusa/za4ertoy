@@ -96,7 +96,7 @@ return(<div key={s.name} style={{display:"flex",alignItems:"center"}}>
 {!c.locked&&!isGM&&<button className="btn main" onClick={function(){if(!window.confirm(((stLeft>0||skLeft>0)?"Остались нераспределённые очки: характеристики "+stLeft+", навыки "+skLeft+". ":"")+"Принять характеристики и навыки? Дальше менять их сможет только мастер."))return;sv(Object.assign({},c,{locked:true,lockedSkills:Object.assign({},c.skills)}))}}>Принять</button>}
 {hasUnlocked&&<button className="btn main" onClick={function(){if(!window.confirm("Зафиксировать потраченные очки навыков? Вернуть их после этого будет нельзя."))return;sv(Object.assign({},c,{lockedSkills:Object.assign({},c.skills)}))}}>Зафиксировать</button>}
 {isGM&&<span className="pill">{c.locked?"принят игроком":"черновик"}</span>}
-{isGM&&c.locked&&<button className="btn sm" onClick={function(){sv(Object.assign({},c,{locked:false}))}}>Вернуть в черновик</button>}
+{isGM&&c.locked&&<button className="btn sm" onClick={function(){sv(Object.assign({},c,{locked:false}))}}title="Игрок снова пройдёт создание; выбранное им сохранится, стартовый набор повторно не выдаётся">Вернуть на создание</button>}
 </div>
 </div>)}
 

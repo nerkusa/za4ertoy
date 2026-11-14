@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { r1 } from '../utils/dice';
 import { IconBattle, IconChat, IconLib, IconScroll, IconSkills, IconBracelet, IconBody, IconInv } from '../icons/index';
 import Dossier from './Dossier';
+import CreationWizard from './CreationWizard';
 import PartyRail from './PartyRail';
 import ChatTab from './tabs/ChatTab';
 import SkillsTab from './tabs/SkillsTab';
@@ -33,6 +34,8 @@ useEffect(function(){if(!c.hpRoll)pr.save(Object.assign({},c,{hpRoll:r1(10)}))},
 useEffect(function(){if(c.combatDepoUsed&&!pr.initiative&&!pr.isGM)pr.save(Object.assign({},c,{combatDepoUsed:false}))},[!!pr.initiative,c.combatDepoUsed]);
 var tabs=[{id:"skills",l:"Навыки",ic:<IconSkills/>},{id:"combat",l:"Бой",ic:<IconBattle/>},{id:"bracelet",l:"Браслет",ic:<IconBracelet/>},{id:"body",l:"Тело",ic:<IconBody/>},{id:"bag",l:"Сумка",ic:<IconInv/>},{id:"chat",l:"Чат и лог",ic:<IconChat/>},{id:"library",l:"Лор",ic:<IconLib/>},{id:"guide",l:"Памятка",ic:<IconScroll/>}];
 var pendAtk=pr.pendAtk||{};var clearPA=pr.clearPendingAttack;var isGMv=pr.isGM;
+/* Лист не принят — игрок проходит пошаговое создание */
+if(!isGMv&&!c.locked)return <CreationWizard char={c} save={pr.save} addLog={pr.addLog}/>;
 return(<div className="zc-main"><RollPopup roll={rP} onClose={function(){sRP(null)}}/>{!isGMv&&<PendingAttackPopup attacks={pendAtk} myId={pr.char._fbId} myChar={pr.char} clearPendingAttack={clearPA} addLog={pr.addLog} onRoll={sRP} room={pr.room}/>}{!isGMv&&<PlayerAttackStatus attacks={pendAtk} myName={pr.char.name} myId={pr.char._fbId} room={pr.room} spawned={pr.spawned||{}} saveSpawned={pr.saveSpawned} addLog={pr.addLog} onRoll={sRP} saveNpcHit={pr.saveNpcHit}/>}{isGMv&&<GMAttackPanel attacks={pendAtk} clearPendingAttack={clearPA} characters={pr.characters||[]} room={pr.room} addLog={pr.addLog} onRoll={sRP}/>}{!isGMv&&(function(){var myEvs=Object.entries(pr.dmgEvents||{}).filter(function(e){return e[1]&&pr.char._fbId===e[0]});if(myEvs.length===0)return null;var ev=myEvs[0];return <DamagePopup event={ev[1]} onClose={function(){if(pr.clearDmgEvent)pr.clearDmgEvent(ev[0]);}}/>;})()}{isGMv&&npcDeathEv&&<NpcDeathPopup event={npcDeathEv} onClose={function(){sNpcDeathEv(null)}}/>}{isGMv&&<PlayerAttackNotif attacks={pendAtk} clearPendingAttack={clearPA} spawned={pr.spawned||{}} saveSpawned={pr.saveSpawned} addLog={pr.addLog} onRoll={sRP} room={pr.room}/>}{!isGMv&&c.levelUpPending&&<LevelUpPopup pending={c.levelUpPending} onAccept={function(){pr.save(Object.assign({},c,{levelUpPending:null}))}}/>}<CoopRollPopup roll={coopRoll} onClose={function(){sCoopRoll(null)}}/>
 <div className="zc-scroll">
 <Dossier char={c} save={pr.save} isGM={pr.isGM} initiative={pr.initiative} onBack={pr.onBack}/>

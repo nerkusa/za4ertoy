@@ -210,14 +210,51 @@ describe('шум кассет, износ насадки, слепки', functio
 
 describe('очки создания', function(){
   var ch2=require('../utils/character');
-  test('30 на характеристики сверх единицы, 35 на навыки', function(){
-    expect(ch2.STAT_POINTS).toBe(30);expect(ch2.SKILL_POINTS).toBe(35);
+  test('20 на характеристики сверх единицы, 25 на навыки', function(){
+    expect(ch2.STAT_POINTS).toBe(20);expect(ch2.SKILL_POINTS).toBe(25);
     expect(ch2.statSpent(ch2.nC().stats)).toBe(0);
-    expect(ch2.statSpent({telo:6,reak:6,vosp:6,razum:6,har:6,volya:6})).toBe(30);
+    expect(ch2.statSpent({telo:6,reak:6,vosp:6,razum:6,har:6,volya:6})).toBe(30);expect(ch2.statSpent({telo:5,reak:5,vosp:4,razum:4,har:4,volya:4})).toBe(20);
     expect(ch2.skillSpent(Object.assign(ch2.nC().skills,{"Торг":3,"Обман":2}))).toBe(5);
   });
   test('генератор тратит ровно бюджет и держит потолки происхождения', function(){
-    for(var i=0;i<20;i++){var r=ch2.rndCore(PROFS[2],"pre");expect(ch2.statSpent(r.stats)).toBe(30);expect(ch2.skillSpent(r.skills)).toBe(35);expect(r.stats.telo).toBeLessThanOrEqual(7)}
-    expect(ch2.statCap("pre","telo")).toBe(7);expect(ch2.statCap("post","telo")).toBe(10);expect(ch2.skillCap("post","Знания")).toBe(3);
+    for(var i=0;i<20;i++){var r=ch2.rndCore(PROFS[2],"pre");expect(ch2.statSpent(r.stats)).toBe(20);expect(ch2.skillSpent(r.skills)).toBe(25);expect(r.stats.telo).toBeLessThanOrEqual(7)}
+    expect(ch2.statCap("pre","telo")).toBe(7);expect(ch2.statCap("post","telo")).toBe(8);expect(ch2.skillCap("post","Знания")).toBe(3);
+  });
+});
+
+describe('пошаговое создание', function(){
+  var C=require('../utils/creation');var G=require('../data/gear');
+  function base(o){return Object.assign(C.emptyCreation(),{name:"Лис",origin:"post",age:"20",postStat:"reak",profession:"strelok",kit:{gun:"«Карманник», пистолет",cass:[]}},o||{})}
+  test('бюджет 20 / 25, потолок 8', function(){
+    expect(C.STAT_POINTS).toBe(20);expect(C.SKILL_POINTS).toBe(25);expect(C.START_CAP).toBe(8);
+    var cr=base({stats:{telo:7}});expect(C.finalStats(cr).telo).toBe(8);expect(C.canStat(cr,"telo")).toBe(false);
+    expect(C.statMax(base({origin:"pre"}),"reak")).toBe(7);
+  });
+  test('бонусы профессии и происхождения идут сверху', function(){
+    var cr=base({skills:{"Огнестрел":3}});var sk=C.finalSkills(cr);
+    expect(sk["Огнестрел"]).toBe(5);expect(sk["Выживание"]).toBe(2);expect(sk["Внимательность"]).toBe(4);
+    expect(C.finalStats(cr).reak).toBe(2);
+    expect(C.skillMax(base(),"Знания")).toBe(3);
+  });
+  test('шаги не пропускают без выбора', function(){
+    expect(C.stepErrors(base({name:" "}),0).length).toBe(1);
+    expect(C.stepErrors(base({age:"40"}),1).length).toBe(1);
+    expect(C.stepErrors(base({origin:"pre",age:"50",pre:{"Знания":3}}),1).length).toBe(1);
+    expect(C.stepErrors(base({kit:{gun:"",cass:[]}}),2).length).toBe(1);
+    expect(C.stepErrors(base(),3).length).toBe(1);
+  });
+  test('принять: числа закрыты, набор выдан один раз', function(){
+    var cr=base({stats:{telo:4,reak:4,vosp:4,razum:3,har:3,volya:2},skills:{"Огнестрел":5,"Уклонение":5,"Скрытность":5,"Атлетика":5,"Медицина":5}});
+    for(var i=0;i<5;i++)expect(C.stepErrors(cr,i)).toEqual([]);
+    var c=require('../utils/character').nC("x");var r=C.finishPatch(c,G.GEAR_DEFAULTS,cr);
+    expect(r.patch.locked).toBe(true);expect(r.patch.stats.reak).toBe(6);expect(r.patch.skills["Огнестрел"]).toBe(7);
+    expect(r.patch.weapons.length).toBe(1);expect(r.patch.weapons[0].name).toMatch(/Карманник/);
+    expect(r.patch.inventory.find(function(i){return i.ptype==="Пуля"}).qty).toBe(30);
+    var again=C.finishPatch(Object.assign({},c,r.patch),G.GEAR_DEFAULTS,cr);expect(again.patch.weapons).toBeUndefined();
+  });
+  test('кассетник получает браслет и две копии', function(){
+    var cr=base({profession:"kassetnik",kit:{gun:"",cass:["torgash","efir"]}});
+    var r=C.finishPatch(require('../utils/character').nC("x"),G.GEAR_DEFAULTS,cr);
+    expect(r.patch.bracelet).toEqual({model:"Utilitary"});expect(r.patch.cassettes.map(function(x){return x.kind})).toEqual(["copy","copy"]);
   });
 });
