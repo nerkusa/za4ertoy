@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { SD, SKD, DC_LIST, stName } from '../../data/stats';
+import { SD, SKD, DC_LIST, stName, skCost } from '../../data/stats';
 import { cF, rndStats, STAT_POINTS, SKILL_POINTS, statSpent, skillSpent, statCap, skillCap } from '../../utils/character';
 import { rollHit } from '../../utils/dice';
 import { fumbleFx } from '../../utils/gearFx';
@@ -23,11 +23,12 @@ var draft=!c.locked&&!isGM;var stLeft=STAT_POINTS-statSpent(c.stats);var skLeft=
 function uS(k,d){if(!free)return;var stats=Object.assign({},c.stats);var cur=stats[k]||1;if(draft&&d>0&&(stLeft<1||cur>=statCap(c.origin,k)))return;stats[k]=Math.max(1,Math.min(10,cur+d));sv(Object.assign({},c,{stats:stats}))}
 function uSk(n,d){
   var skills=Object.assign({},c.skills);var cur=skills[n]||0;
-  if(free){if(draft&&d>0&&(skLeft<1||cur>=skillCap(c.origin,n)))return;skills[n]=Math.max(0,Math.min(10,cur+d));sv(Object.assign({},c,{skills:skills}));return}
+  if(free){if(draft&&d>0&&(skLeft<skCost(n)||cur>=skillCap(c.origin,n)))return;skills[n]=Math.max(0,Math.min(10,cur+d));sv(Object.assign({},c,{skills:skills}));return}
   /* принятый лист: игрок тратит только очки уровня, вернуть можно не ниже зафиксированного */
   var floor=(c.lockedSkills&&c.lockedSkills[n])||0;
-  if(d<0){if(cur<=floor)return;skills[n]=cur-1;sv(Object.assign({},c,{skills:skills,skillPts:pts+1}));return}
-  if(pts<1||cur>=10)return;skills[n]=cur+1;sv(Object.assign({},c,{skills:skills,skillPts:pts-1}));
+  var cost=skCost(n);
+  if(d<0){if(cur<=floor)return;skills[n]=cur-1;sv(Object.assign({},c,{skills:skills,skillPts:pts+cost}));return}
+  if(pts<cost||cur>=10)return;skills[n]=cur+1;sv(Object.assign({},c,{skills:skills,skillPts:pts-cost}));
 }
 function roll(statKey,skill){
   var R=rollHit();var sVal=fs[statKey]||0;var kVal=skill?(es[skill]||0):0;
@@ -60,7 +61,7 @@ return(<div style={{display:"flex",flexDirection:"column",gap:12}}>
 <span style={{color:"var(--muted)"}}>{dc?(DC_LIST.find(function(d){return d.v===dc})||{}).l:"бросок без сложности"}</span>
 </div>
 {(inf.pen.dose||inf.pen.disease||inf.pen.will||inf.pen.shaken)?<div className="warnbox">{"Штрафы: "+[inf.pen.will?"Воля "+inf.pen.will:null,inf.pen.shaken?"потрясён "+inf.pen.shaken:null,inf.pen.dose?"Доза "+inf.pen.dose+" ко всем броскам":null,inf.pen.disease?"болезнь −1 к Телу и Реакции":null].filter(Boolean).join(" · ")}</div>:null}
-{c.locked&&!isGM&&pts>0&&<div className="okbox">{"Очки навыков за уровень: "+pts+" — трать кнопками «+» у навыков."}</div>}
+{c.locked&&!isGM&&pts>0&&<div className="okbox">{"Очки навыков за уровень: "+pts+" — трать кнопками «+» у навыков. Навык ×2 стоит 2 очка."}</div>}
 {isGM&&<div className="hint">Мастер правит числа свободно.</div>}
 {draft&&<div className={stLeft===0&&skLeft===0?"okbox":"warnbox"}>{"Создание: характеристики — осталось "+stLeft+" из "+STAT_POINTS+" · навыки — осталось "+skLeft+" из "+SKILL_POINTS+". Распредели и нажми «Принять»."}</div>}
 
@@ -77,10 +78,10 @@ return(<div key={st.key} className="stat" style={{borderTopColor:st.color}}>
 </div>
 <div className="skl">
 {SKD[st.key].map(function(s){var ev=es[s.name]||0;var bon=bonusOf(inf.src.skill[s.name]);var blocked=fineBlocked(c,getTraits(),s.name);
-var canMinus=free||(c.locked&&(c.skills[s.name]||0)>((c.lockedSkills&&c.lockedSkills[s.name])||0));var canPlus=draft?(skLeft>0&&(c.skills[s.name]||0)<skillCap(c.origin,s.name)):(free||pts>0);
+var canMinus=free||(c.locked&&(c.skills[s.name]||0)>((c.lockedSkills&&c.lockedSkills[s.name])||0));var canPlus=draft?(skLeft>=skCost(s.name)&&(c.skills[s.name]||0)<skillCap(c.origin,s.name)):(free||pts>=skCost(s.name));
 return(<div key={s.name} style={{display:"flex",alignItems:"center"}}>
 <button className="sk" onClick={function(){roll(st.key,s.name)}}>
-<span>{s.name}{blocked&&<em style={{color:"var(--rust)",fontSize:11,marginLeft:6}}>тонкая работа невозможна</em>}</span>
+<span>{s.name}{skCost(s.name)>1&&<em className="mono" style={{color:"var(--rust)",fontSize:11,marginLeft:4,fontStyle:"normal"}}>×2</em>}{blocked&&<em style={{color:"var(--rust)",fontSize:11,marginLeft:6}}>тонкая работа невозможна</em>}</span>
 <span className="bon">{bon}</span>
 <span className="tot">{v+ev}<em>{" ("+v+"+"+ev+")"}</em></span>
 </button>

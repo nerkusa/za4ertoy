@@ -1,6 +1,6 @@
 /* Характеристики и навыки «За Чертой · 2035».
-   Навыков ×2 нет: все навыки стоят одинаково (x2 оставлен false для
-   совместимости с кодом базы). */
+   Навыки ×2, как в Nox Aeterna: единица такого навыка стоит 2 очка
+   (при создании и при трате очков за уровень). Список — X2_SKILLS. */
 var SD=[
   {key:"telo",full:"Тело",short:"ТЕЛ",color:"#8a3b22",emoji:""},
   {key:"reak",full:"Реакция",short:"РЕА",color:"#4f5b2a",emoji:""},
@@ -9,7 +9,10 @@ var SD=[
   {key:"har",full:"Характер",short:"ХАР",color:"#7a5a12",emoji:""},
   {key:"volya",full:"Воля",short:"ВОЛ",color:"#211d18",emoji:""}
 ];
-function sk(n){return{name:n,x2:false}}
+var X2_SKILLS=["Ближний бой","Огнестрел","Метание","Уклонение","Скрытность","Воровство","Медицина","Выживание","Убеждение","Выдержка"];
+function sk(n){return{name:n,x2:X2_SKILLS.indexOf(n)>=0}}
+/* Цена одной единицы навыка в очках */
+function skCost(n){return X2_SKILLS.indexOf(n)>=0?2:1}
 var SKD={
   telo:[sk("Ближний бой"),sk("Атлетика"),sk("Запугивание")],
   reak:[sk("Огнестрел"),sk("Метание"),sk("Уклонение"),sk("Скрытность"),sk("Воровство")],
@@ -43,4 +46,4 @@ function skLabel(n){return SK_LABEL[n]||n}
 /* СЛ проверок */
 var DC_LIST=[{v:8,l:"пустяк"},{v:12,l:"обычное дело"},{v:16,l:"трудно"},{v:20,l:"очень трудно"},{v:24,l:"почти невозможно"},{v:28,l:"легенда"}];
 
-export { SD, SKD, ALL_SKILLS, SK_STAT, skStat, stName, stShort, WS, DT, DT_LABEL, WT, SK_LABEL, skLabel, WSTAT, wStat, WT_LABEL, wtLabel, NPC_WSK, NPC_SK, npcAtk, DC_LIST };
+export { X2_SKILLS, skCost, SD, SKD, ALL_SKILLS, SK_STAT, skStat, stName, stShort, WS, DT, DT_LABEL, WT, SK_LABEL, skLabel, WSTAT, wStat, WT_LABEL, wtLabel, NPC_WSK, NPC_SK, npcAtk, DC_LIST };

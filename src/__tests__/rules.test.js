@@ -215,6 +215,7 @@ describe('очки создания', function(){
     expect(ch2.statSpent(ch2.nC().stats)).toBe(0);
     expect(ch2.statSpent({telo:6,reak:6,vosp:6,razum:6,har:6,volya:6})).toBe(30);expect(ch2.statSpent({telo:5,reak:5,vosp:4,razum:4,har:4,volya:4})).toBe(20);
     expect(ch2.skillSpent(Object.assign(ch2.nC().skills,{"Торг":3,"Обман":2}))).toBe(5);
+    expect(ch2.skillSpent(Object.assign(ch2.nC().skills,{"Огнестрел":3,"Торг":1}))).toBe(7);
   });
   test('генератор тратит ровно бюджет и держит потолки происхождения', function(){
     for(var i=0;i<20;i++){var r=ch2.rndCore(PROFS[2],"pre");expect(ch2.statSpent(r.stats)).toBe(20);expect(ch2.skillSpent(r.skills)).toBe(25);expect(r.stats.telo).toBeLessThanOrEqual(7)}
@@ -244,9 +245,10 @@ describe('пошаговое создание', function(){
     expect(C.stepErrors(base(),3).length).toBe(1);
   });
   test('принять: числа закрыты, набор выдан один раз', function(){
-    var cr=base({stats:{telo:4,reak:4,vosp:4,razum:3,har:3,volya:2},skills:{"Огнестрел":5,"Уклонение":5,"Скрытность":5,"Атлетика":5,"Медицина":5}});
+    var cr=base({stats:{telo:4,reak:4,vosp:4,razum:3,har:3,volya:2},skills:{"Огнестрел":5,"Уклонение":3,"Атлетика":3,"Запугивание":3,"Торг":3}});
     for(var i=0;i<5;i++)expect(C.stepErrors(cr,i)).toEqual([]);
     var c=require('../utils/character').nC("x");var r=C.finishPatch(c,G.GEAR_DEFAULTS,cr);
+    expect(C.skillsLeft(cr)).toBe(0);
     expect(r.patch.locked).toBe(true);expect(r.patch.stats.reak).toBe(6);expect(r.patch.skills["Огнестрел"]).toBe(7);
     expect(r.patch.weapons.length).toBe(1);expect(r.patch.weapons[0].name).toMatch(/Карманник/);
     expect(r.patch.inventory.find(function(i){return i.ptype==="Пуля"}).qty).toBe(30);
@@ -256,5 +258,21 @@ describe('пошаговое создание', function(){
     var cr=base({profession:"kassetnik",kit:{gun:"",cass:["torgash","efir"]}});
     var r=C.finishPatch(require('../utils/character').nC("x"),G.GEAR_DEFAULTS,cr);
     expect(r.patch.bracelet).toEqual({model:"Utilitary"});expect(r.patch.cassettes.map(function(x){return x.kind})).toEqual(["copy","copy"]);
+  });
+});
+
+describe('навыки ×2', function(){
+  var S=require('../data/stats');var C=require('../utils/creation');
+  test('цена: ×2 стоят 2 очка', function(){
+    expect(S.skCost("Огнестрел")).toBe(2);expect(S.skCost("Медицина")).toBe(2);expect(S.skCost("Торг")).toBe(1);expect(S.skCost("Атлетика")).toBe(1);
+    expect(S.X2_SKILLS.length).toBe(10);
+  });
+  test('при создании ×2 съедает 2 очка, нельзя купить за последнее 1', function(){
+    var cr=Object.assign(C.emptyCreation(),{origin:"post",profession:"montyor",skills:{"Огнестрел":4,"Уклонение":4,"Скрытность":4,"Знания":0,"Торг":0}});
+    expect(C.skillsLeft(cr)).toBe(1);expect(C.canSkill(cr,"Воровство")).toBe(false);expect(C.canSkill(cr,"Торг")).toBe(true);
+  });
+  test('генератор не перерасходует бюджет', function(){
+    var ch=require('../utils/character');
+    for(var i=0;i<30;i++){var r=ch.rndCore(PROFS[1],"post");expect(ch.skillSpent(r.skills)).toBeLessThanOrEqual(25);expect(ch.skillSpent(r.skills)).toBeGreaterThanOrEqual(24)}
   });
 });

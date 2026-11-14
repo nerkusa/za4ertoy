@@ -1,5 +1,5 @@
 import { NAMES_P } from '../data/lore';
-import { SD, SKD, ALL_SKILLS } from '../data/stats';
+import { SD, SKD, ALL_SKILLS, skCost } from '../data/stats';
 import { pk, r1 } from './dice';
 import { getProfs } from './profStore';
 import { getTraits } from './traitStore';
@@ -10,7 +10,8 @@ import { originOf } from '../data/professions';
 function iS(){var s={};SD.forEach(function(x){s[x.key]=1});return s}
 function iSk(){var s={};ALL_SKILLS.forEach(function(n){s[n]=0});return s}
 function uSP(s){return Object.values(s).reduce(function(a,b){return a+b},0)}
-function uSkP(s){var t=0;ALL_SKILLS.forEach(function(n){t+=(s[n]||0)});return t}
+/* Потрачено очков навыков: навыки ×2 стоят 2 очка за единицу */
+function uSkP(s){var t=0;ALL_SKILLS.forEach(function(n){t+=(s[n]||0)*skCost(n)});return t}
 function gE(b,bo){var r=Object.assign({},b);Object.entries(bo||{}).forEach(function(e){r[e[0]]=(r[e[0]]||0)+e[1]});return r}
 
 /* Штраф Дозы ко всем броскам: 4–6 → −1, 7+ → −2 */
@@ -115,9 +116,10 @@ function rndCore(pr,originId){
   var sk=iSk();var pref=(pr&&pr.skills)||[];var budget=SKILL_POINTS;
   function scap(n){return Math.min(6,skCaps[n]!==undefined?skCaps[n]:6)}
   for(var x=0;x<400&&budget>0;x++){
-    var pool=(x<12&&pref.length?pref:ALL_SKILLS).filter(function(n){return sk[n]<scap(n)});
-    if(!pool.length){pool=ALL_SKILLS.filter(function(n){return sk[n]<scap(n)});if(!pool.length)break}
-    sk[pk(pool)]++;budget--;
+    var fits=function(n){return sk[n]<scap(n)&&skCost(n)<=budget};
+    var pool=(x<12&&pref.length?pref:ALL_SKILLS).filter(fits);
+    if(!pool.length){pool=ALL_SKILLS.filter(fits);if(!pool.length)break}
+    var n1=pk(pool);sk[n1]++;budget-=skCost(n1);
   }
   return{stats:st,skills:sk}}
 function rnd(pId,originId){var P=getProfs();var pr=P.find(function(p){return p.id===pId})||P[0];var core=rndCore(pr,originId||"post");return{name:pk(NAMES_P),stats:core.stats,skills:core.skills}}

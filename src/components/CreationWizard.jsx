@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { SD, SKD } from '../data/stats';
+import { SD, SKD, skCost } from '../data/stats';
 import { ORIGINS } from '../data/professions';
 import { getProfs } from '../utils/profStore';
 import { getTraits } from '../utils/traitStore';
@@ -12,11 +12,12 @@ var STEPS=["Кличка","Происхождение","Профессия","Х�
    этот экран; после «Принять» характеристики и навыки закрыты. */
 function CreationWizard(pr){
 var c=pr.char;var sv=pr.save;var profs=getProfs();var cat=getTraits();
-var cr=Object.assign(emptyCreation(),c.creation||{});cr.kit=Object.assign({gun:"",cass:[]},cr.kit||{});
-if(!c.creation&&c.name&&!cr.name)cr.name=c.name;
+/* Выбор держим локально (иначе быстрые нажатия подряд затирают друг
+   друга, пока сервер не ответил) и сохраняем на сервер при каждом шаге. */
+var _cr=useState(function(){var x=Object.assign(emptyCreation(),c.creation||{});x.kit=Object.assign({gun:"",cass:[]},x.kit||{});if(!c.creation&&c.name&&!x.name)x.name=c.name;return x});var cr=_cr[0];var sCr=_cr[1];
 var _s=useState(Math.min(c.creationStep||0,5));var step=_s[0];var sStep=_s[1];
 var _t=useState(false);var tried=_t[0];var sTried=_t[1];
-function put(next,clamp){var n=clamp?clampCreation(next,profs):next;sv(Object.assign({},c,{creation:n,creationStep:step}))}
+function put(next,clamp){var n=clamp?clampCreation(next,profs):next;sCr(n);sv(Object.assign({},c,{creation:n,creationStep:step}))}
 function set(k,v,clamp){var n=JSON.parse(JSON.stringify(cr));n[k]=v;put(n,clamp)}
 var errs=stepErrors(cr,step,profs);
 function next(){if(errs.length){sTried(true);return}sTried(false);sStep(step+1);sv(Object.assign({},c,{creation:cr,creationStep:step+1}))}
@@ -78,11 +79,11 @@ if(step===3)body=(<div style={{display:"flex",flexDirection:"column",gap:12}}>
 
 if(step===4)body=(<div style={{display:"flex",flexDirection:"column",gap:12}}>
   <h2>Навыки</h2>
-  <div className={skillsLeft(cr)===0?"okbox":"warnbox"}>{"Очков: "+SKILL_POINTS+" · осталось "+skillsLeft(cr)+". Бонусы профессии и происхождения уже вписаны. На старте навык не выше "+START_CAP+"."}</div>
+  <div className={skillsLeft(cr)===0?"okbox":"warnbox"}>{"Очков: "+SKILL_POINTS+" · осталось "+skillsLeft(cr)+". Навыки ×2 стоят 2 очка за единицу. Бонусы профессии и происхождения уже вписаны и бесплатны. На старте навык не выше "+START_CAP+"."}</div>
   <div className="statgrid">{SD.map(function(s){return <div key={s.key} className="stat" style={{borderTopColor:s.color}}>
     <div className="sh" style={{cursor:"default"}}><span className="sv">{fs[s.key]}</span><span className="sn">{s.full}</span></div>
     <div className="skl">{SKD[s.key].map(function(x){var n=x.name;var v=(cr.skills||{})[n]||0;return <div key={n} className="row" style={{padding:"4px 10px",justifyContent:"space-between",flexWrap:"nowrap"}}>
-      <span style={{minWidth:0}}>{n}{kb[n]?<span className="bon mono" style={{color:"var(--swamp)",fontSize:11,marginLeft:6}}>{"+"+kb[n]}</span>:null}{skillMax(cr,n)<START_CAP?<span className="mono" style={{color:"var(--muted)",fontSize:11,marginLeft:6}}>{"≤"+skillMax(cr,n)}</span>:null}</span>
+      <span style={{minWidth:0}}>{n}{skCost(n)>1?<span className="mono" style={{color:"var(--rust)",fontSize:11,marginLeft:4}}>×2</span>:null}{kb[n]?<span className="bon mono" style={{color:"var(--swamp)",fontSize:11,marginLeft:6}}>{"+"+kb[n]}</span>:null}{skillMax(cr,n)<START_CAP?<span className="mono" style={{color:"var(--muted)",fontSize:11,marginLeft:6}}>{"≤"+skillMax(cr,n)}</span>:null}</span>
       <span className="row" style={{flexWrap:"nowrap"}}><b className="mono" style={{minWidth:20,textAlign:"right"}}>{fsk[n]}</b><Counter minus={v>0} plus={canSkill(cr,n,profs)} onMinus={function(){adj("skills",n,-1)}} onPlus={function(){adj("skills",n,1)}}/></span></div>})}</div></div>})}</div>
 </div>);
 

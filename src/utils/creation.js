@@ -1,7 +1,7 @@
 /* Пошаговое создание персонажа. Всё, что игрок выбрал, хранится в
    c.creation; итоговые характеристики, навыки и стартовый набор
    считаются отсюда при «Принять». Чистые функции — покрыты тестами. */
-import { SD, ALL_SKILLS } from '../data/stats';
+import { SD, ALL_SKILLS, skCost } from '../data/stats';
 import { PROFS, originOf } from '../data/professions';
 import { buildShopDefaults, buildMiscDefaults } from '../data/shopDefaults';
 import { grantPatch } from './grant';
@@ -34,12 +34,14 @@ function finalStats(cr){var b=statBonus(cr);var o={};SD.forEach(function(s){o[s.
 function finalSkills(cr,profs){var b=skillBonus(cr,profs);var o={};ALL_SKILLS.forEach(function(n){o[n]=((cr.skills||{})[n]||0)+(b[n]||0)});return o}
 function spent(obj){return Object.keys(obj||{}).reduce(function(a,k){return a+(obj[k]||0)},0)}
 function statsLeft(cr){return STAT_POINTS-spent(cr.stats)}
-function skillsLeft(cr){return SKILL_POINTS-spent(cr.skills)}
+/* Очки навыков: единица навыка ×2 стоит 2 очка; бонусы профессии и происхождения бесплатны */
+function skillsSpent(cr){var s=cr.skills||{};return Object.keys(s).reduce(function(a,n){return a+(s[n]||0)*skCost(n)},0)}
+function skillsLeft(cr){return SKILL_POINTS-skillsSpent(cr)}
 function preLeft(cr){return PRE_POINTS-spent(cr.pre)}
 
 /* Можно ли добавить очко */
 function canStat(cr,k){return statsLeft(cr)>0&&finalStats(cr)[k]<statMax(cr,k)}
-function canSkill(cr,n,profs){return skillsLeft(cr)>0&&finalSkills(cr,profs)[n]<skillMax(cr,n)}
+function canSkill(cr,n,profs){return skillsLeft(cr)>=skCost(n)&&finalSkills(cr,profs)[n]<skillMax(cr,n)}
 
 /* Ошибки по шагам: пустой массив — шаг пройден */
 function stepErrors(cr,step,profs){
@@ -61,7 +63,10 @@ function stepErrors(cr,step,profs){
     var fs=finalStats(cr);SD.forEach(function(s){if(fs[s.key]>statMax(cr,s.key))e.push(s.full+": не выше "+statMax(cr,s.key))});
   }
   if(step===4){
-    if(skillsLeft(cr)!==0)e.push("Распредели все очки навыков (осталось "+skillsLeft(cr)+")");
+    /* Остаток в 1 очко допустим, если все навыки ×1 уже упёрлись в потолок */
+    var left=skillsLeft(cr);var anyOne=ALL_SKILLS.some(function(n){return canSkill(cr,n,profs)});
+    if(left<0)e.push("Потрачено больше очков навыков, чем есть");
+    else if(left>0&&anyOne)e.push("Распредели все очки навыков (осталось "+left+")");
     var sk=finalSkills(cr,profs);ALL_SKILLS.forEach(function(n){if(sk[n]>skillMax(cr,n))e.push(n+": не выше "+skillMax(cr,n))});
   }
   return e;
