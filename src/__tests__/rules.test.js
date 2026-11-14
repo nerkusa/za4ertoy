@@ -16,7 +16,7 @@ describe('схема и производные', function(){
   test('новый персонаж: 6 характеристик, 19 навыков, без рас и черт', function(){
     var c=nC("x");
     expect(Object.keys(c.stats).sort()).toEqual(['har','razum','reak','telo','volya','vosp']);
-    expect(ALL_SKILLS.length).toBe(19);expect(Object.keys(c.skills).length).toBe(19);
+    expect(ALL_SKILLS.length).toBe(20);expect(Object.keys(c.skills).length).toBe(20);expect(c.skills['Вождение']).toBe(0);
     expect(c.raceId).toBeUndefined();expect(c.traits).toBeUndefined();expect(c.currency).toBeUndefined();expect(c.money).toBe(0);
   });
   test('Здоровье = (Тело + Реакция) × 2 + hpRoll; довоенный −5', function(){
@@ -24,8 +24,9 @@ describe('схема и производные', function(){
     expect(mHP(cF(c).fs,c)).toBe(27);
     expect(mHP(cF(Object.assign({},c,{origin:"pre"})).fs,Object.assign({},c,{origin:"pre"}))).toBe(22);
   });
-  test('награда за уровень — только очки навыков', function(){
-    for(var l=2;l<=12;l++){var r=levelUpReward(l);expect(r.stat).toBeUndefined();expect(typeof r.skill).toBe('number')}
+  test('награда за уровень: +1 очко навыка и +2 Здоровья', function(){
+    for(var l=2;l<=12;l++){var r=levelUpReward(l);expect(r.stat).toBeUndefined();expect(r.skillPoints).toBe(1);expect(r.maxHp).toBe(2)}
+    var c=ch({stats:{telo:5,reak:6,vosp:1,razum:1,har:1,volya:4},level:4,levelHp:6});expect(mHP(cF(c).fs,c)).toBe(33);
     expect(xpForLevel(3)).toBe(300);
   });
   test('генератор: 6 характеристик, ограничения происхождения', function(){
@@ -208,71 +209,53 @@ describe('шум кассет, износ насадки, слепки', functio
   });
 });
 
-describe('очки создания', function(){
-  var ch2=require('../utils/character');
-  test('20 на характеристики сверх единицы, 25 на навыки', function(){
-    expect(ch2.STAT_POINTS).toBe(20);expect(ch2.SKILL_POINTS).toBe(25);
-    expect(ch2.statSpent(ch2.nC().stats)).toBe(0);
-    expect(ch2.statSpent({telo:6,reak:6,vosp:6,razum:6,har:6,volya:6})).toBe(30);expect(ch2.statSpent({telo:5,reak:5,vosp:4,razum:4,har:4,volya:4})).toBe(20);
-    expect(ch2.skillSpent(Object.assign(ch2.nC().skills,{"Торг":3,"Обман":2}))).toBe(5);
-    expect(ch2.skillSpent(Object.assign(ch2.nC().skills,{"Огнестрел":3,"Торг":1}))).toBe(7);
-  });
-  test('генератор тратит ровно бюджет и держит потолки происхождения', function(){
-    for(var i=0;i<20;i++){var r=ch2.rndCore(PROFS[2],"pre");expect(ch2.statSpent(r.stats)).toBe(20);expect(ch2.skillSpent(r.skills)).toBe(25);expect(r.stats.telo).toBeLessThanOrEqual(7)}
-    expect(ch2.statCap("pre","telo")).toBe(7);expect(ch2.statCap("post","telo")).toBe(8);expect(ch2.skillCap("post","Знания")).toBe(3);
-  });
-});
-
-describe('пошаговое создание', function(){
-  var C=require('../utils/creation');var G=require('../data/gear');
-  function base(o){return Object.assign(C.emptyCreation(),{name:"Лис",origin:"post",age:"20",postStat:"reak",profession:"strelok",kit:{gun:"«Карманник», пистолет",cass:[]}},o||{})}
-  test('бюджет 20 / 25, потолок 8', function(){
-    expect(C.STAT_POINTS).toBe(20);expect(C.SKILL_POINTS).toBe(25);expect(C.START_CAP).toBe(8);
-    var cr=base({stats:{telo:7}});expect(C.finalStats(cr).telo).toBe(8);expect(C.canStat(cr,"telo")).toBe(false);
+describe('создание v3', function(){
+  var C=require('../utils/creation');var G=require('../data/gear');var S=require('../data/stats');var CH=require('../utils/character');
+  function base(o){return Object.assign(C.emptyCreation(),{name:"Гайка",origin:"post",age:"22",postStat:"reak",profession:"montyor",kit:{gun:"",cass:[]}},o||{})}
+  test('бюджет 15 / 15, потолок 8, стартовые значения происхождения', function(){
+    expect(C.STAT_POINTS).toBe(15);expect(C.SKILL_POINTS).toBe(15);expect(C.START_CAP).toBe(8);
+    expect(C.finalStats(base({postStat:""}))).toEqual({telo:3,reak:3,vosp:3,razum:2,har:2,volya:3});
+    expect(C.finalStats(base({origin:"pre"}))).toEqual({telo:2,reak:2,vosp:3,razum:3,har:3,volya:3});
     expect(C.statMax(base({origin:"pre"}),"reak")).toBe(7);
   });
-  test('бонусы профессии и происхождения идут сверху', function(){
-    var cr=base({skills:{"Огнестрел":3}});var sk=C.finalSkills(cr);
-    expect(sk["Огнестрел"]).toBe(5);expect(sk["Выживание"]).toBe(2);expect(sk["Внимательность"]).toBe(4);
-    expect(C.finalStats(cr).reak).toBe(2);
-    expect(C.skillMax(base(),"Знания")).toBe(3);
+  test('пример из книги: Гайка', function(){
+    var cr=base({stats:{telo:1,reak:3,vosp:2,razum:5,har:2,volya:2},skills:{"Механика":3,"Техника":1,"Атлетика":1,"Торг":1,"Внимательность":1,"Огнестрел":2,"Вождение":1,"Выживание":1}});
+    expect(C.statsLeft(cr)).toBe(0);expect(C.skillsLeft(cr)).toBe(0);
+    expect(C.finalStats(cr)).toEqual({telo:4,reak:7,vosp:5,razum:7,har:4,volya:5});
+    var sk=C.finalSkills(cr);expect(sk["Механика"]).toBe(5);expect(sk["Техника"]).toBe(3);expect(sk["Внимательность"]).toBe(3);expect(sk["Выживание"]).toBe(3);
+    for(var i=0;i<5;i++)expect(C.stepErrors(cr,i)).toEqual([]);
+  });
+  test('Вождение — навык Реакции, ×2', function(){
+    expect(S.skStat("Вождение")).toBe("reak");expect(S.skCost("Вождение")).toBe(2);expect(S.X2_SKILLS.length).toBe(11);
+    expect(S.skCost("Торг")).toBe(1);
+  });
+  test('×2 съедает 2 очка, за последнее 1 не купить', function(){
+    var cr=base({skills:{"Огнестрел":4,"Уклонение":3}});
+    expect(C.skillsLeft(cr)).toBe(1);expect(C.canSkill(cr,"Вождение")).toBe(false);expect(C.canSkill(cr,"Торг")).toBe(true);
   });
   test('шаги не пропускают без выбора', function(){
     expect(C.stepErrors(base({name:" "}),0).length).toBe(1);
     expect(C.stepErrors(base({age:"40"}),1).length).toBe(1);
     expect(C.stepErrors(base({origin:"pre",age:"50",pre:{"Знания":3}}),1).length).toBe(1);
-    expect(C.stepErrors(base({kit:{gun:"",cass:[]}}),2).length).toBe(1);
+    expect(C.stepErrors(base({profession:"strelok"}),2).length).toBe(1);
     expect(C.stepErrors(base(),3).length).toBe(1);
   });
-  test('принять: числа закрыты, набор выдан один раз', function(){
-    var cr=base({stats:{telo:4,reak:4,vosp:4,razum:3,har:3,volya:2},skills:{"Огнестрел":5,"Уклонение":3,"Атлетика":3,"Запугивание":3,"Торг":3}});
-    for(var i=0;i<5;i++)expect(C.stepErrors(cr,i)).toEqual([]);
-    var c=require('../utils/character').nC("x");var r=C.finishPatch(c,G.GEAR_DEFAULTS,cr);
-    expect(C.skillsLeft(cr)).toBe(0);
-    expect(r.patch.locked).toBe(true);expect(r.patch.stats.reak).toBe(6);expect(r.patch.skills["Огнестрел"]).toBe(7);
-    expect(r.patch.weapons.length).toBe(1);expect(r.patch.weapons[0].name).toMatch(/Карманник/);
-    expect(r.patch.inventory.find(function(i){return i.ptype==="Пуля"}).qty).toBe(30);
-    var again=C.finishPatch(Object.assign({},c,r.patch),G.GEAR_DEFAULTS,cr);expect(again.patch.weapons).toBeUndefined();
+  test('Водила: +2 к Вождению, буханка в гараж, канистра, монтировка', function(){
+    var cr=base({profession:"vodila"});expect(C.finalSkills(cr)["Вождение"]).toBe(2);
+    var r=C.finishPatch(CH.nC("x"),G.GEAR_DEFAULTS,cr);
+    expect(r.patch.garage.length).toBe(1);expect(r.patch.garage[0]).toMatchObject({key:"bukhanka",hull:45,maxHull:45,armorType:"light",speed:2,handling:-1,ram:"4d6"});
+    expect(r.patch.inventory.some(function(i){return /Канистра/.test(i.name)})).toBe(true);
+    expect(r.patch.weapons.map(function(w){return w.name})).toContain("Монтировка");
+    expect(C.finishPatch(Object.assign({},CH.nC("x"),r.patch),G.GEAR_DEFAULTS,cr).patch.garage).toBeUndefined();
   });
-  test('кассетник получает браслет и две копии', function(){
-    var cr=base({profession:"kassetnik",kit:{gun:"",cass:["torgash","efir"]}});
-    var r=C.finishPatch(require('../utils/character').nC("x"),G.GEAR_DEFAULTS,cr);
-    expect(r.patch.bracelet).toEqual({model:"Utilitary"});expect(r.patch.cassettes.map(function(x){return x.kind})).toEqual(["copy","copy"]);
+  test('стрелок и кассетник получают набор', function(){
+    var r=C.finishPatch(CH.nC("x"),G.GEAR_DEFAULTS,base({profession:"strelok",kit:{gun:"«Карманник», пистолет",cass:[]}}));
+    expect(r.patch.locked).toBe(true);expect(r.patch.weapons[0].name).toMatch(/Карманник/);expect(r.patch.inventory.find(function(i){return i.ptype==="Пуля"}).qty).toBe(30);
+    var k=C.finishPatch(CH.nC("x"),G.GEAR_DEFAULTS,base({profession:"kassetnik",kit:{gun:"",cass:["torgash","efir"]}}));
+    expect(k.patch.bracelet).toEqual({model:"Utilitary"});expect(k.patch.cassettes.length).toBe(2);
   });
-});
-
-describe('навыки ×2', function(){
-  var S=require('../data/stats');var C=require('../utils/creation');
-  test('цена: ×2 стоят 2 очка', function(){
-    expect(S.skCost("Огнестрел")).toBe(2);expect(S.skCost("Медицина")).toBe(2);expect(S.skCost("Торг")).toBe(1);expect(S.skCost("Атлетика")).toBe(1);
-    expect(S.X2_SKILLS.length).toBe(10);
-  });
-  test('при создании ×2 съедает 2 очка, нельзя купить за последнее 1', function(){
-    var cr=Object.assign(C.emptyCreation(),{origin:"post",profession:"montyor",skills:{"Огнестрел":4,"Уклонение":4,"Скрытность":4,"Знания":0,"Торг":0}});
-    expect(C.skillsLeft(cr)).toBe(1);expect(C.canSkill(cr,"Воровство")).toBe(false);expect(C.canSkill(cr,"Торг")).toBe(true);
-  });
-  test('генератор не перерасходует бюджет', function(){
-    var ch=require('../utils/character');
-    for(var i=0;i<30;i++){var r=ch.rndCore(PROFS[1],"post");expect(ch.skillSpent(r.skills)).toBeLessThanOrEqual(25);expect(ch.skillSpent(r.skills)).toBeGreaterThanOrEqual(24)}
+  test('генератор: старт происхождения + 15 очков, бюджет навыков не превышен', function(){
+    for(var i=0;i<20;i++){var r=CH.rndCore(PROFS[2],"pre");expect(CH.statSpent(r.stats,"pre")).toBe(15);expect(r.stats.telo).toBeLessThanOrEqual(7);
+      var s=CH.skillSpent(r.skills);expect(s).toBeLessThanOrEqual(15);expect(s).toBeGreaterThanOrEqual(14)}
   });
 });

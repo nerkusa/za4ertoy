@@ -87,8 +87,8 @@ function PartyCard(pr) {
   function giveMoney() { const amt = parseInt(mg) || 0; if (!amt) return; save({ money: Math.max(0, (c.money || 0) + amt) }); log('Деньги', c.name + ': ' + (amt > 0 ? '+' : '') + amt + ' ер.'); setMg(''); }
   function levelUp() {
     const nl = c.level + 1; const rw = levelUpReward(nl);
-    save({ level: nl, lockedSkills: Object.assign({}, c.skills), skillPts: (c.skillPts || 0) + rw.skill, levelUpPending: { level: nl, stat: 0, skill: rw.skill } });
-    log('Поднял уровень', c.name + ': ур.' + c.level + ' → ' + nl + ' (+' + rw.skill + ' очк. навыков)');
+    save({ level: nl, lockedSkills: Object.assign({}, c.skills), skillPts: (c.skillPts || 0) + rw.skillPoints, levelHp: (c.levelHp || 0) + rw.maxHp, levelUpPending: { level: nl, stat: 0, skill: rw.skillPoints, maxHp: rw.maxHp } });
+    log('Поднял уровень', c.name + ': ур.' + c.level + ' → ' + nl + ' (+' + rw.skillPoints + ' очк. навыка, +' + rw.maxHp + ' к Здоровью)');
   }
   /* Отдых восстанавливает Здоровье и Волю, как в базе; при Дозе 4+ Здоровье не восстанавливается */
   function rest() {
@@ -124,7 +124,7 @@ function PartyCard(pr) {
           <dt>Болезни</dt><dd>{dis.length ? dis.join(', ') : '—'}</dd>
           <dt>Деньги</dt><dd>{fmtMoney(c.money || 0)}</dd>
           <dt>Молва</dt><dd>{(c.molva > 0 ? '+' : '') + (c.molva || 0)}</dd>
-          <dt>Опыт</dt><dd>{xpp.got + '/' + xpp.need + ' до ур.' + (xpp.level + 1) + (xpp.ready ? ' · готов' : '') + ' · награда: +' + levelUpReward(c.level + 1).skill + ' очк. навыков'}</dd>
+          <dt>Опыт</dt><dd>{xpp.got + '/' + xpp.need + ' до ур.' + (xpp.level + 1) + (xpp.ready ? ' · готов' : '') + ' · награда: +1 очко навыка и +2 Здоровья'}</dd>
           <dt>Браслет</dt><dd>{b ? b.name + ' · свободно ' + ni.free + ' из ' + ni.total : 'нет'}</dd>
           <dt>В гнёздах</dt><dd>{inNest.length ? inNest.map(function (x) { const d = findBy(cat.cassettes, x.key); return (d ? d.name : x.key) + ' (' + kindName(x.kind) + (x.kind === 'fake' && x.fakeState ? ': ' + (x.fakeState === 'silent' ? 'молчит' : x.fakeState === 'copy' ? 'как копия' : 'застряла') : '') + (x.kind === 'slep' ? ', отпечаток ' + (x.imprint || 0) + ' ' + IMPRINT_STAGES[x.imprint || 0] : '') + ')'; }).join('; ') : '—'}</dd>
           <dt>Солюшны</dt><dd>{solutionList(c, cat).map(function (x) { return x.name; }).join(', ') || '—'}{' · шагов железа: ' + steps + (stage ? ' (' + stage.name + ')' : '')}</dd>

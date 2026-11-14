@@ -5,9 +5,11 @@ import { SD, ALL_SKILLS, skCost } from '../data/stats';
 import { PROFS, originOf } from '../data/professions';
 import { buildShopDefaults, buildMiscDefaults } from '../data/shopDefaults';
 import { grantPatch } from './grant';
+import { newVehicle } from '../data/vehicles';
 
-/* На старте: 20 очков на характеристики, 25 на навыки, потолок 8 */
-var STAT_POINTS=20,SKILL_POINTS=25,PRE_POINTS=4,START_CAP=8;
+/* На старте: 15 очков на характеристики (сверх стартовых значений
+   происхождения), 15 на навыки, потолок 8 */
+var STAT_POINTS=15,SKILL_POINTS=15,PRE_POINTS=4,START_CAP=8;
 var PRE_SKILLS=["Знания","Техника","Механика","Медицина"];
 var AGE={pre:[45,70],post:[18,23]};
 var STRELOK_GUNS=["«Трубач», самопал","«Кум», двуствольный обрез","«Карманник», пистолет"];
@@ -30,7 +32,9 @@ function skillBonus(cr,profs){
 function statMax(cr,k){var c=originOf(cr.origin).caps||{};return Math.min(START_CAP,c[k]||START_CAP)}
 function skillMax(cr,n){var c=cr.origin==="post"?(originOf("post").startSkillCaps||{}):{};return c[n]!==undefined?Math.min(START_CAP,c[n]):START_CAP}
 
-function finalStats(cr){var b=statBonus(cr);var o={};SD.forEach(function(s){o[s.key]=1+((cr.stats||{})[s.key]||0)+(b[s.key]||0)});return o}
+/* Стартовые характеристики происхождения (до выбора — по 1) */
+function baseStats(cr){var b=cr.origin?(originOf(cr.origin).base||{}):{};var o={};SD.forEach(function(s){o[s.key]=b[s.key]||1});return o}
+function finalStats(cr){var b=statBonus(cr);var base=baseStats(cr);var o={};SD.forEach(function(s){o[s.key]=base[s.key]+((cr.stats||{})[s.key]||0)+(b[s.key]||0)});return o}
 function finalSkills(cr,profs){var b=skillBonus(cr,profs);var o={};ALL_SKILLS.forEach(function(n){o[n]=((cr.skills||{})[n]||0)+(b[n]||0)});return o}
 function spent(obj){return Object.keys(obj||{}).reduce(function(a,k){return a+(obj[k]||0)},0)}
 function statsLeft(cr){return STAT_POINTS-spent(cr.stats)}
@@ -87,18 +91,20 @@ var KIT={
   feldsher:function(){return [{name:"Бинты",qty:3},{name:"Жгут",qty:2},{name:"Скальпель"},{name:"Спирт (фляга)"}]},
   kassetnik:function(cr){return [{name:"Браслет MG+ Utilitary"},{name:"Планшет"},{name:"Станок кассетника"}].concat((cr.kit.cass||[]).map(function(k){return{cassette:k}}))},
   korobeynik:function(){return [{item:{cat:"item",name:"Короб товара на 100 ер.",desc:"Товар на продажу."}},{name:"Весы"},{name:"Якутский нож (быһах)"}]},
-  montyor:function(){return [{name:"Ящик инструментов"},{name:"Проволока и изолента"},{name:"Паяльник"}]}
+  montyor:function(){return [{name:"Ящик инструментов"},{name:"Проволока и изолента"},{name:"Паяльник"}]},
+  vodila:function(){return [{vehicle:"bukhanka"},{name:"Канистра горючки (20 л)",item:{cat:"item",name:"Канистра горючки (20 л)",desc:"Один перегон буханке или джипу, два — мотоциклу."}},{name:"Монтировка"}]}
 };
 function kitList(cr){var f=KIT[cr.profession];return f?f(cr):[]}
 function kitPatch(c,cat,cr){
   var all=buildShopDefaults().concat(buildMiscDefaults());var cur=Object.assign({},c);var names=[];
   kitList(cr).forEach(function(k){
+    if(k.vehicle){var vh=newVehicle(k.vehicle,{name:"Буханка (битая, но на ходу)"});cur=Object.assign(cur,{garage:(cur.garage||[]).concat([vh])});names.push(vh.name);return}
     var it=k.item||(k.cassette?{cat:"cassette",gearKey:k.cassette,name:k.cassette}:all.find(function(i){return i.name===k.name}));
     if(!it)return;
     for(var q=0;q<(k.qty||1);q++){var p=grantPatch(cur,cat,it,{kind:"copy"});if(!p.error)cur=Object.assign(cur,p)}
     names.push(k.cassette?(((cat.cassettes||[]).find(function(x){return x.key===k.cassette})||{}).name||k.cassette)+" (копия)":it.name+(k.qty>1?" ×"+k.qty:""));
   });
-  var patch={};["weapons","inventory","cassettes","bracelet","solutions","armors","shields"].forEach(function(f){if(cur[f]!==c[f])patch[f]=cur[f]});
+  var patch={};["weapons","inventory","cassettes","bracelet","solutions","armors","shields","garage"].forEach(function(f){if(cur[f]!==c[f])patch[f]=cur[f]});
   return{patch:patch,names:names};
 }
 /* Итоговый патч персонажа при «Принять» */
@@ -110,4 +116,4 @@ function finishPatch(c,cat,cr,profs){
   return{patch:patch,kitNames:names};
 }
 
-export { yearsWord, START_CAP, STAT_POINTS, SKILL_POINTS, PRE_POINTS, PRE_SKILLS, AGE, STRELOK_GUNS, emptyCreation, statBonus, skillBonus, statMax, skillMax, finalStats, finalSkills, statsLeft, skillsLeft, preLeft, canStat, canSkill, stepErrors, clampCreation, kitList, kitPatch, finishPatch };
+export { baseStats, yearsWord, START_CAP, STAT_POINTS, SKILL_POINTS, PRE_POINTS, PRE_SKILLS, AGE, STRELOK_GUNS, emptyCreation, statBonus, skillBonus, statMax, skillMax, finalStats, finalSkills, statsLeft, skillsLeft, preLeft, canStat, canSkill, stepErrors, clampCreation, kitList, kitPatch, finishPatch };

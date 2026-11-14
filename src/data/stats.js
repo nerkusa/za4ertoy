@@ -9,13 +9,13 @@ var SD=[
   {key:"har",full:"Характер",short:"ХАР",color:"#7a5a12",emoji:""},
   {key:"volya",full:"Воля",short:"ВОЛ",color:"#211d18",emoji:""}
 ];
-var X2_SKILLS=["Ближний бой","Огнестрел","Метание","Уклонение","Скрытность","Воровство","Медицина","Выживание","Убеждение","Выдержка"];
+var X2_SKILLS=["Ближний бой","Огнестрел","Метание","Уклонение","Вождение","Скрытность","Воровство","Медицина","Выживание","Убеждение","Выдержка"];
 function sk(n){return{name:n,x2:X2_SKILLS.indexOf(n)>=0}}
 /* Цена одной единицы навыка в очках */
 function skCost(n){return X2_SKILLS.indexOf(n)>=0?2:1}
 var SKD={
   telo:[sk("Ближний бой"),sk("Атлетика"),sk("Запугивание")],
-  reak:[sk("Огнестрел"),sk("Метание"),sk("Уклонение"),sk("Скрытность"),sk("Воровство")],
+  reak:[sk("Огнестрел"),sk("Метание"),sk("Уклонение"),sk("Вождение"),sk("Скрытность"),sk("Воровство")],
   vosp:[sk("Внимательность"),sk("Выживание"),sk("Проницательность")],
   razum:[sk("Техника"),sk("Механика"),sk("Медицина"),sk("Знания")],
   har:[sk("Убеждение"),sk("Обман"),sk("Торг")],
@@ -38,7 +38,7 @@ var WT_LABEL={Battle:"Холодное",Simple:"Подручное",Guns:"Огн
 var DT_LABEL={"К":"колющий","Р":"режущий","Д":"дробящий","С":"стрела","П":"пуля"};
 /* Боевые навыки NPC (ключи в npc.skills) */
 var NPC_WSK={Brawl:"melee",Battle:"melee",Simple:"melee",Guns:"guns",Archery:"guns",Thrown:"thrown"};
-var NPC_SK=[{k:"dodge",l:"Уклонение",st:"reak"},{k:"melee",l:"Ближний бой",st:"telo"},{k:"guns",l:"Огнестрел",st:"reak"},{k:"thrown",l:"Метание",st:"reak"},{k:"athletics",l:"Атлетика",st:"telo"}];
+var NPC_SK=[{k:"dodge",l:"Уклонение",st:"reak"},{k:"melee",l:"Ближний бой",st:"telo"},{k:"guns",l:"Огнестрел",st:"reak"},{k:"thrown",l:"Метание",st:"reak"},{k:"athletics",l:"Атлетика",st:"telo"},{k:"driving",l:"Вождение",st:"reak"}];
 /* Бросок атаки NPC: характеристика + навык по типу оружия */
 function npcAtk(st,skills,w){var key=NPC_WSK[w.type]||"melee";var stat=wStat(w.type);var d=NPC_SK.find(function(x){return x.k===key});return{rv:(st||{})[stat]||0,skVal:(skills||{})[key]||0,skNm:d?d.l:key,atName:stName(stat)}}
 var SK_LABEL={};

@@ -4,7 +4,7 @@ import { ORIGINS } from '../data/professions';
 import { getProfs } from '../utils/profStore';
 import { getTraits } from '../utils/traitStore';
 import { mHP } from '../utils/character';
-import { yearsWord, START_CAP, STAT_POINTS, SKILL_POINTS, PRE_POINTS, PRE_SKILLS, AGE, STRELOK_GUNS, emptyCreation, statBonus, skillBonus, statMax, skillMax, finalStats, finalSkills, statsLeft, skillsLeft, preLeft, canStat, canSkill, stepErrors, clampCreation, kitList, finishPatch } from '../utils/creation';
+import { baseStats, yearsWord, START_CAP, STAT_POINTS, SKILL_POINTS, PRE_POINTS, PRE_SKILLS, AGE, STRELOK_GUNS, emptyCreation, statBonus, skillBonus, statMax, skillMax, finalStats, finalSkills, statsLeft, skillsLeft, preLeft, canStat, canSkill, stepErrors, clampCreation, kitList, finishPatch } from '../utils/creation';
 
 var STEPS=["Кличка","Происхождение","Профессия","Характеристики","Навыки","Итог"];
 
@@ -70,10 +70,10 @@ if(step===2)body=(<div style={{display:"flex",flexDirection:"column",gap:12}}>
 
 if(step===3)body=(<div style={{display:"flex",flexDirection:"column",gap:12}}>
   <h2>Характеристики</h2>
-  <div className={statsLeft(cr)===0?"okbox":"warnbox"}>{"Очков: "+STAT_POINTS+" · осталось "+statsLeft(cr)+". Каждая начинается с 1, на старте не выше "+START_CAP+"."}</div>
+  <div className={statsLeft(cr)===0?"okbox":"warnbox"}>{"Очков: "+STAT_POINTS+" · осталось "+statsLeft(cr)+". Каждая начинается со значения происхождения, на старте не выше "+START_CAP+"."}</div>
   {SD.map(function(s){var v=(cr.stats||{})[s.key]||0;return <div key={s.key} className="stat" style={{borderTopColor:s.color}}><div className="row" style={{padding:"8px 10px",justifyContent:"space-between"}}>
     <span className="sv">{fs[s.key]}</span><span className="sn" style={{flex:1}}>{s.full}<small>{SKD[s.key].map(function(x){return x.name}).join(", ")+(sb[s.key]?" · +"+sb[s.key]+" от происхождения":"")+" · не выше "+statMax(cr,s.key)}</small></span>
-    <Counter minus={v>0} plus={canStat(cr,s.key)} onMinus={function(){adj("stats",s.key,-1)}} onPlus={function(){adj("stats",s.key,1)}}/></div></div>})}
+    <Counter minus={v>0} plus={canStat(cr,s.key)} onMinus={function(){adj("stats",s.key,-1)}} onPlus={function(){adj("stats",s.key,1)}}/></div><div className="lblm" style={{padding:"0 10px 6px"}}>{"старт "+baseStats(cr)[s.key]+(v?" · +"+v+" очк.":"")}</div></div>})}
   <p className="hint">{"Здоровье выйдет: "+mHP(fs,{hpRoll:c.hpRoll,origin:cr.origin})+" (Тело и Реакция × 2 + бросок"+(cr.origin==="pre"?" − 5":"")+"). Воля: "+fs.volya+"."}</p>
 </div>);
 
@@ -94,7 +94,7 @@ if(step===5){var org=ORIGINS.find(function(o){return o.id===cr.origin})||{};
     <dt>Здоровье</dt><dd>{mHP(fs,{hpRoll:c.hpRoll,origin:cr.origin})}</dd><dt>Воля</dt><dd>{fs.volya}</dd>
     <dt>Характеристики</dt><dd>{SD.map(function(s){return s.full+" "+fs[s.key]}).join(" · ")}</dd>
     <dt>Навыки</dt><dd>{Object.keys(fsk).filter(function(n){return fsk[n]>0}).map(function(n){return n+" "+fsk[n]}).join(" · ")||"—"}</dd>
-    <dt>С собой</dt><dd>{c.kitGiven?"набор уже выдан":(kitList(cr).map(function(k){return k.cassette?((cat.cassettes.find(function(x){return x.key===k.cassette})||{}).name+" (копия)"):(k.item?k.item.name:k.name)+(k.qty>1?" ×"+k.qty:"")}).join(", ")||"—")}</dd></dl>
+    <dt>С собой</dt><dd>{c.kitGiven?"набор уже выдан":(kitList(cr).map(function(k){if(k.vehicle)return "Буханка (в гараж)";return k.cassette?((cat.cassettes.find(function(x){return x.key===k.cassette})||{}).name+" (копия)"):(k.item?k.item.name:k.name)+(k.qty>1?" ×"+k.qty:"")}).join(", ")||"—")}</dd></dl>
   <div className="warnbox">После «Принять» характеристики и навыки меняет только мастер. Дальше расти — через очки навыков за уровень и кассеты.</div>
   <div><button className="btn main" onClick={finish}>Принять персонажа</button></div>
 </div>)}

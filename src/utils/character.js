@@ -67,8 +67,11 @@ function cF(c){
 
 /* Здоровье = (Тело + Реакция) × 2 + hpRoll (+ эффекты hp_flat). Кубик
    бросается один раз (hpRoll хранится на персонаже). */
+/* Здоровье = (Тело + Реакция) × 2 + d10 + рост за уровни + эффекты.
+   levelHp копится при повышении уровня (+2 за уровень с правил v3):
+   у старых персонажей прошлые уровни не пересчитываются. */
 function mHP(f,c){
-  var base=(f.telo||0)*2+(f.reak||0)*2+((c&&c.hpRoll)||0);
+  var base=(f.telo||0)*2+(f.reak||0)*2+((c&&c.hpRoll)||0)+((c&&c.levelHp)||0);
   if(!c)return Math.max(1,base);
   var bonus=0;
   activeTraitEffects(c,getTraits()).forEach(function(e){if(e.type==="hp_flat")bonus+=(e.amount||0)});
@@ -94,23 +97,26 @@ function xpProgress(c){
 
 /* Награда за уровень — только очки навыков: характеристики растут
    только через кассеты. Уровни выше 10 получают награду 10-го. */
-var LEVEL_REWARDS={2:{skill:2},3:{skill:4},4:{skill:2},5:{skill:2},6:{skill:3},7:{skill:2},8:{skill:4},9:{skill:0},10:{skill:5}};
+/* Каждый уровень 2–10: +1 очко навыка и +2 к максимальному Здоровью
+   (навык ×2 растёт раз в два уровня). skill — старое имя поля для кода базы. */
+var LEVEL_REWARDS={};for(var _l=2;_l<=10;_l++)LEVEL_REWARDS[_l]={skillPoints:1,maxHp:2,skill:1};
 function levelUpReward(level){return LEVEL_REWARDS[level]||LEVEL_REWARDS[10]}
 
 /* Случайные 6 характеристик и навыки под профессию и происхождение.
    Правил создания по очкам в книге пока нет — это только черновик для
    быстрого старта, числа потом правятся вручную. */
-/* Очки создания: 20 на характеристики (сверх стартовой единицы в каждой)
-   и 25 на навыки, потолок на старте 8. Основной путь — utils/creation.js. */
-var STAT_POINTS=20,SKILL_POINTS=25;
-function statSpent(stats){return SD.reduce(function(a,s){return a+Math.max(0,((stats||{})[s.key]||1)-1)},0)}
+/* Очки создания: 15 на характеристики и 15 на навыки, потолок на старте 8.
+   Основной путь — utils/creation.js; здесь — для генератора. */
+var STAT_POINTS=15,SKILL_POINTS=15;
+/* Потрачено очков характеристик сверх стартовых значений происхождения */
+function statSpent(stats,originId){var b=originId?(originOf(originId).base||{}):{};return SD.reduce(function(a,s){return a+Math.max(0,((stats||{})[s.key]||1)-(b[s.key]||1))},0)}
 function skillSpent(skills){return uSkP(skills||{})}
 /* Потолок характеристики и навыка в черновике с учётом происхождения */
 function statCap(originId,k){var c=originOf(originId).caps||{};return Math.min(8,c[k]||8)}
 function skillCap(originId,n){var c=originOf(originId).startSkillCaps||{};return c[n]!==undefined?c[n]:8}
 function rndCore(pr,originId){
   var org=originOf(originId);var caps=org.caps||{};var skCaps=org.startSkillCaps||{};
-  var st=iS();var keys=SD.map(function(s){return s.key});
+  var st=Object.assign(iS(),org.base||{});var keys=SD.map(function(s){return s.key});
   function cap(k){return Math.min(8,caps[k]||8)}
   for(var i=0;i<STAT_POINTS;i++){var cn=keys.filter(function(k){return st[k]<cap(k)});if(!cn.length)break;st[pk(cn)]++}
   var sk=iSk();var pref=(pr&&pr.skills)||[];var budget=SKILL_POINTS;
