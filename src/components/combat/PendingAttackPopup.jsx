@@ -119,11 +119,11 @@ function PendingAttackPopup(pr){
           <div style={{fontFamily:"var(--f-body)",fontSize:32,fontWeight:700,color:accentF}}>{"= "+atk.hitRoll}</div>
         </div>
         <div style={{background:"#e2d8c3",border:"1px solid "+accentF+"40",borderRadius:0,padding:"8px 12px"}}>
-          <div style={{fontSize:11,color:"#6a6052",marginBottom:4}}>Твоё Выдержка</div>
+          <div style={{fontSize:11,color:"#6a6052",marginBottom:4}}>Твоя Выдержка</div>
           {waiting
             ?<div>
               <div style={{fontSize:11,color:"#6a6052",marginBottom:8}}>{"d10 + Воля("+(fs.volya||0)+") + Выдержка("+(es["Выдержка"]||0)+")"+(rPen?" "+rPen:"")}</div>
-              <button onClick={doDodge} style={{width:"100%",padding:"10px",borderRadius:0,border:"none",background:accentF,color:"#fff",fontFamily:"var(--f-body)",fontWeight:700,fontSize:14,cursor:"pointer",marginBottom:6}}>Бросить Выдержка!</button>
+              <button onClick={doDodge} style={{width:"100%",padding:"10px",borderRadius:0,border:"none",background:accentF,color:"#fff",fontFamily:"var(--f-body)",fontWeight:700,fontSize:14,cursor:"pointer",marginBottom:6}}>Бросить Выдержку!</button>
               <button onClick={acceptHit} style={{width:"100%",padding:6,borderRadius:0,border:"2px solid #8a3b2240",background:"none",color:"#8a3b22",fontWeight:700,fontSize:10,cursor:"pointer"}}>Не сопротивляться</button>
             </div>
             :<div>

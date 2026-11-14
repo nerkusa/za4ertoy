@@ -49,7 +49,7 @@ function PlayerAttackStatus(pr){
         {isFear
           ?<div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:8,padding:"8px 0"}}>
             <div style={{width:8,height:8,borderRadius:"50%",background:"#8a6200"}}/>
-            <span style={{fontSize:12,color:"#6a6052",fontStyle:"italic"}}>ГМ бросает Выдержка — итог в логе события</span>
+            <span style={{fontSize:12,color:"#6a6052",fontStyle:"italic"}}>ГМ бросает Выдержку — итог в логе события</span>
           </div>
           :waiting
           ?<div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:8,padding:"8px 0"}}>

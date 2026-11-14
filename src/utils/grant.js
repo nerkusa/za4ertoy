@@ -34,7 +34,7 @@ function grantPatch(c,cat,it,opts){
 function grantLabel(it,opts,forGm){
   if(it.cat!=="cassette")return it.name;
   var k=(opts&&opts.kind)||it.kind||"copy";
-  return it.name+" ("+kindName(!forGm&&k==="fake"?"orig":k)+")";
+  return it.name.replace(/, копия$/,"")+" ("+kindName(!forGm&&k==="fake"?"orig":k)+")";
 }
 
 export { grantPatch, grantLabel };

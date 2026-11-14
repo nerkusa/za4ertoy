@@ -1,0 +1,20 @@
+[Unit]
+Description=За Чертой 2035 — realtime backend (WS server)
+After=network.target
+
+[Service]
+Type=simple
+User=www-data
+WorkingDirectory=/opt/zachertoy-companion/server
+Environment=PORT=8788
+# Данные этой игры лежат отдельно от Nox Aeterna
+Environment=DATA_FILE=/var/lib/zachertoy/data.json
+Environment=USERS_FILE=/var/lib/zachertoy/users.json
+# Логин и пароль мастера: GM_LOGIN=... и GM_PASSWORD=... (см. deploy/VPS_SETUP.md)
+EnvironmentFile=/etc/zachertoy/server.env
+ExecStart=/usr/bin/node /opt/zachertoy-companion/server/index.js
+Restart=on-failure
+RestartSec=2
+
+[Install]
+WantedBy=multi-user.target

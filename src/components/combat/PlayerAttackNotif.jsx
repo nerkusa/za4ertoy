@@ -136,7 +136,7 @@ function PlayerAttackNotif(pr){
       <div style={{background:"#e2d8c3",border:"1px solid "+(isFear?"#6b2f4a40":"#c6bba3"),borderRadius:0,padding:"8px 12px",marginBottom:10}}>
         <div style={{fontSize:11,color:"#6a6052",marginBottom:4}}>{isFear?("Выдержка "+atk.npcName):("Уклонение "+atk.npcName)}</div>
         <div style={{fontSize:11,color:"#6a6052",marginBottom:6}}>{isFear?("d10 + Воля("+npcWill+") + Выдержка("+((npc&&(npc.extraSkills||{})["Выдержка"])||0)+")"):("d10 + Реакция("+npcDex+") + Уклонение("+npcDodge+")")}</div>
-        <button onClick={doDodge} style={{width:"100%",padding:"10px",borderRadius:0,border:"none",background:isFear?"#6b2f4a":"#3f6b34",color:"#fff",fontFamily:"var(--f-body)",fontWeight:700,fontSize:14,cursor:"pointer"}}>{isFear?"Бросить Выдержка!":"Бросить уклонение!"}</button>
+        <button onClick={doDodge} style={{width:"100%",padding:"10px",borderRadius:0,border:"none",background:isFear?"#6b2f4a":"#3f6b34",color:"#fff",fontFamily:"var(--f-body)",fontWeight:700,fontSize:14,cursor:"pointer"}}>{isFear?"Бросить Выдержку!":"Бросить уклонение!"}</button>
       </div>
       <button onClick={acceptHit} style={{width:"100%",padding:6,borderRadius:0,border:"2px solid "+accent+"40",background:"none",color:"#6a6052",fontWeight:700,fontSize:10,cursor:"pointer"}}>{isFear?"Не сопротивляться страху":"Принять удар без уклонения"}</button>
     </div>
