@@ -1,0 +1,13 @@
+{
+  "name": "zachertoy-server",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Локальный/VPS realtime-бэкенд для «За Чертой · 2035»",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "ws": "^8.18.0"
+  }
+}
