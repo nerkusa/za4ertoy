@@ -6,7 +6,6 @@ import { originOf } from '../data/professions';
 import { IRON_STAGES, doseState } from '../data/gear';
 import { ironSteps, hasTablet } from '../data/traits';
 import { inCombat } from '../utils/gearFx';
-import { fmtMoney } from '../utils/currency';
 import LiveField from './LiveField';
 
 /* Шапка-досье: портрет, кличка, профессия, происхождение, бейджи и трекеры. */
@@ -31,7 +30,7 @@ return(<div className="dossier">
   <div className="nameRow">
     {pr.onBack&&<button className="btn sm" onClick={pr.onBack}>К отряду</button>}
     <LiveField className="nameInput" value={c.name||""} placeholder="Кличка" onCommit={function(val){sv(Object.assign({},c,{name:val}))}}/>
-    <span className="meta">{[pf.id!=="none"?pf.name:"без профессии",org.name].join(" · ")}</span>
+    <span className="meta">{[pf.id!=="none"?pf.name:"без профессии",org.name,"опыт "+xpp.got+"/"+xpp.need].join(" · ")}</span>
   </div>
   <div className="badges">
     {c.bracelet&&c.bracelet.model?<span className="badge dark">{"MG+ "+c.bracelet.model}</span>:<span className="badge">браслета нет</span>}
@@ -57,14 +56,14 @@ return(<div className="dossier">
     </div>
     <div className="trk">
       <div className="lbl"><span>Еврорубли</span></div>
-      <div className="val" style={{fontSize:19}}>{fmtMoney(money)}</div>
-      <span className="pm" style={{marginLeft:0}}><button onClick={function(){sv(Object.assign({},c,{money:Math.max(0,money-1)}))}}>−</button><button onClick={function(){sv(Object.assign({},c,{money:money+1}))}}>+</button></span>
+      <div className="val" style={{fontSize:19}}><LiveField type="text" inputMode="numeric" pattern="[0-9]*" value={money} title="Впиши сумму" onCommit={function(val){sv(Object.assign({},c,{money:Math.max(0,parseInt(val)||0)}))}} style={{width:"100%",minWidth:0,fontFamily:"var(--f-display)",fontSize:19,padding:"2px 6px"}}/></div>
+      <div className="lbl"><span>ер. · впиши сумму</span></div>
     </div>
     <div className="trk">
       <div className="lbl"><span>Молва</span></div>
       <div className="val" style={{fontSize:19}}>{(molva>0?"+":"")+molva}</div>
       {gm?<span className="pm" style={{marginLeft:0}}><button onClick={function(){sv(Object.assign({},c,{molva:Math.max(-5,molva-1)}))}}>−</button><button onClick={function(){sv(Object.assign({},c,{molva:Math.min(5,molva+1)}))}}>+</button></span>
-         :<div className="lbl"><span>{"опыт "+xpp.got+"/"+xpp.need}</span></div>}
+         :null}
     </div>
   </div>
   {xpp.ready&&!gm&&<div className="state" style={{color:"var(--ok)"}}>Опыта хватает на новый уровень — скажи мастеру.</div>}

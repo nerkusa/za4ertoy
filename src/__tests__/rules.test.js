@@ -207,3 +207,17 @@ describe('шум кассет, износ насадки, слепки', functio
     expect(activeTraitEffects(ch(p),CAT).filter(function(e){return e.type==="skill_bonus"}).length).toBe(0);
   });
 });
+
+describe('очки создания', function(){
+  var ch2=require('../utils/character');
+  test('30 на характеристики сверх единицы, 35 на навыки', function(){
+    expect(ch2.STAT_POINTS).toBe(30);expect(ch2.SKILL_POINTS).toBe(35);
+    expect(ch2.statSpent(ch2.nC().stats)).toBe(0);
+    expect(ch2.statSpent({telo:6,reak:6,vosp:6,razum:6,har:6,volya:6})).toBe(30);
+    expect(ch2.skillSpent(Object.assign(ch2.nC().skills,{"Торг":3,"Обман":2}))).toBe(5);
+  });
+  test('генератор тратит ровно бюджет и держит потолки происхождения', function(){
+    for(var i=0;i<20;i++){var r=ch2.rndCore(PROFS[2],"pre");expect(ch2.statSpent(r.stats)).toBe(30);expect(ch2.skillSpent(r.skills)).toBe(35);expect(r.stats.telo).toBeLessThanOrEqual(7)}
+    expect(ch2.statCap("pre","telo")).toBe(7);expect(ch2.statCap("post","telo")).toBe(10);expect(ch2.skillCap("post","Знания")).toBe(3);
+  });
+});

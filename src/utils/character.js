@@ -99,15 +99,23 @@ function levelUpReward(level){return LEVEL_REWARDS[level]||LEVEL_REWARDS[10]}
 /* Случайные 6 характеристик и навыки под профессию и происхождение.
    Правил создания по очкам в книге пока нет — это только черновик для
    быстрого старта, числа потом правятся вручную. */
+/* Очки создания: 30 на характеристики (сверх стартовой единицы в каждой)
+   и 35 на навыки. */
+var STAT_POINTS=30,SKILL_POINTS=35;
+function statSpent(stats){return SD.reduce(function(a,s){return a+Math.max(0,((stats||{})[s.key]||1)-1)},0)}
+function skillSpent(skills){return uSkP(skills||{})}
+/* Потолок характеристики и навыка в черновике с учётом происхождения */
+function statCap(originId,k){var c=originOf(originId).caps||{};return c[k]||10}
+function skillCap(originId,n){var c=originOf(originId).startSkillCaps||{};return c[n]!==undefined?c[n]:10}
 function rndCore(pr,originId){
   var org=originOf(originId);var caps=org.caps||{};var skCaps=org.startSkillCaps||{};
   var st=iS();var keys=SD.map(function(s){return s.key});
   function cap(k){return Math.min(8,caps[k]||8)}
-  for(var i=0;i<24;i++){var cn=keys.filter(function(k){return st[k]<cap(k)});if(!cn.length)break;st[pk(cn)]++}
-  var sk=iSk();var pref=(pr&&pr.skills)||[];var budget=30;
+  for(var i=0;i<STAT_POINTS;i++){var cn=keys.filter(function(k){return st[k]<cap(k)});if(!cn.length)break;st[pk(cn)]++}
+  var sk=iSk();var pref=(pr&&pr.skills)||[];var budget=SKILL_POINTS;
   function scap(n){return Math.min(6,skCaps[n]!==undefined?skCaps[n]:6)}
-  for(var x=0;x<200&&budget>0;x++){
-    var pool=(x<60&&pref.length?pref:ALL_SKILLS).filter(function(n){return sk[n]<scap(n)});
+  for(var x=0;x<400&&budget>0;x++){
+    var pool=(x<12&&pref.length?pref:ALL_SKILLS).filter(function(n){return sk[n]<scap(n)});
     if(!pool.length){pool=ALL_SKILLS.filter(function(n){return sk[n]<scap(n)});if(!pool.length)break}
     sk[pk(pool)]++;budget--;
   }
@@ -121,4 +129,4 @@ function willOf(c,fs){var mx=c.willOv||fs.volya||1;var cur=c.curWill!==null&&c.c
 /* Здоровье словами — для «Немоты» (5+ шагов железа, без планшета) */
 function hpWords(cur,max){var p=max>0?cur/max:0;if(p>=0.7)return"легко";if(p>=0.35)return"плохо";return"очень плохо"}
 
-export { iS, iSk, uSP, uSkP, gE, cF, mHP, nC, rnd, rndStats, rndCore, xpForLevel, xpProgress, levelUpReward, LEVEL_REWARDS, willPenalty, dosePenalty, diseasePenalty, hpOf, willOf, hpWords };
+export { STAT_POINTS, SKILL_POINTS, statSpent, skillSpent, statCap, skillCap, iS, iSk, uSP, uSkP, gE, cF, mHP, nC, rnd, rndStats, rndCore, xpForLevel, xpProgress, levelUpReward, LEVEL_REWARDS, willPenalty, dosePenalty, diseasePenalty, hpOf, willOf, hpWords };
