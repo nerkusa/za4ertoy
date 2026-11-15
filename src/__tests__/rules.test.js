@@ -448,3 +448,49 @@ describe('жизненный путь', function(){
     expect(r.patch.prostheses.legR).toMatchObject({grade:"new",tip:"stopa"});expect(r.patch.debts[0].amount).toBe(200);
   });
 });
+
+describe('машины', function(){
+  var V=require('../utils/vehicles');var VD=require('../data/vehicles');
+  function seq(arr){var i=0;return function(){return arr[i++%arr.length]}}
+  var buh=function(o){return Object.assign(VD.newVehicle("bukhanka"),o||{})};
+  test('каталог гаража по книге', function(){
+    var b=VD.vehicleByKey("bukhanka");expect(b).toMatchObject({hull:45,armorType:"light",armorHp:10,speed:2,handling:-1,seats:"8",tank:3,ram:"4d6",price:900,repairBonus:2,swampFree:true});
+    expect(VD.vehicleByKey("truck")).toMatchObject({hull:90,armorType:"heavy",armorHp:30,ram:"6d6",price:null});
+    expect(VD.vehicleByKey("moto").moto).toBe(true);expect(VD.vehicleByKey("bezbashennik")).toMatchObject({hull:120,armorHp:40,ram:"8d6"});
+  });
+  test('бросок водителя: Реакция + Вождение + Управляемость + d10, колесо −2, топь −2 (кроме Буханки)', function(){
+    var r=V.driverRoll({reak:6,driving:3},VD.newVehicle("buggy"),{},{d:5});expect(r.total).toBe(15);
+    expect(V.driverRoll({reak:6,driving:3},Object.assign(VD.newVehicle("buggy"),{wheelsHit:1}),{swamp:true},{d:5}).total).toBe(11);
+    expect(V.driverRoll({reak:6,driving:3},buh(),{swamp:true},{d:5}).total).toBe(13);
+  });
+  test('погоня: быстрая прибавляет разницу скоростей, 5+ — два очка', function(){
+    var a={v:VD.newVehicle("moto"),total:10},b={v:buh(),total:12};
+    var r=V.chaseRound(a,b);expect(r.ta).toBe(13);expect(r.winner).toBe("a");expect(r.gain).toBe(1);
+    expect(V.chaseRound({v:buh(),total:20},{v:buh(),total:12}).gain).toBe(2);
+    expect(V.chaseRound({v:buh(),total:12},{v:buh(),total:12}).winner).toBeNull();
+    expect(V.CHASE_GOAL).toBe(3);
+  });
+  test('таран: атака должна быть больше защиты; таранящему половина', function(){
+    expect(V.ramResult(10,10,"4d6").hit).toBe(false);
+    var r=V.ramResult(14,10,"4d6",seq([5]));expect(r).toEqual({hit:true,dmg:20,self:10});
+  });
+  test('попадание d6: водитель, колесо, корпус, мотор, бак', function(){
+    var b=buh();
+    var d1=V.vehicleHit(b,10,"П",null,{d6:1});expect(d1.driverDmg).toBe(5);expect(d1.v.hull).toBe(40);
+    var m1=V.vehicleHit(VD.newVehicle("moto"),10,"П",null,{d6:1});expect(m1.driverDmg).toBe(10);expect(m1.v.hull).toBe(20);
+    var d2=V.vehicleHit(b,10,"П",null,{d6:2});expect(d2.v.wheelsHit).toBe(1);expect(V.vehicleHit(d2.v,10,"П",null,{d6:2}).v.stopped).toBe(true);
+    var d3=V.vehicleHit(b,8,"К",null,{d6:3});expect(d3.v.hull).toBe(41);expect(d3.v.armorHp).toBe(8);
+    expect(V.vehicleHit(b,6,"П",null,{d6:5}).v.speedLoss).toBe(1);
+    expect(V.vehicleHit(b,6,"П",null,{d6:6,fire:6}).v.burning).toBe(true);expect(V.vehicleHit(b,6,"П",null,{d6:6,fire:3}).v.burning).toBeFalsy();
+  });
+  test('корпус 0: встала; от тарана или на скорости 4–5 — переворот 3d6', function(){
+    var slow=V.vehicleHit(buh({hull:3,armorHp:0}),10,"П",seq([4]),{d6:3});expect(slow.v.stopped).toBe(true);expect(slow.flip).toBeUndefined();
+    var fast=V.vehicleHit(Object.assign(VD.newVehicle("buggy"),{hull:3,armorHp:0}),10,"П",seq([4]),{d6:3});expect(fast.flip).toBe(12);
+    var ram=V.zeroHull(buh({hull:5}),buh({hull:0}),true,seq([2]));expect(ram.flip).toBe(6);
+  });
+  test('ремонт: ящик 1d6, проволока 1d4; мотор и колесо — Механика СЛ 14 (Буханка +2)', function(){
+    expect(V.repairHull(buh({hull:10}),"tools",seq([6])).v.hull).toBe(16);expect(V.repairHull(buh({hull:44}),"wire",seq([4])).v.hull).toBe(45);
+    expect(V.repairPartBonus(buh())).toBe(2);expect(V.fixPart(buh({speedLoss:1,wheelsHit:2,stopped:true}),"wheel").stopped).toBe(false);
+    expect(V.movingPen(true,false)).toBe(-4);expect(V.movingPen(false,true)).toBe(0);expect(V.movingPen(false,false)).toBe(-2);
+  });
+});

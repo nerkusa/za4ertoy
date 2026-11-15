@@ -1,4 +1,5 @@
 import { uid } from '../utils/dice';
+import { VEHICLES } from './vehicles';
 import { CASSETTES, TIPS, LEG_TIPS, IMPLANTS, ARM_PRICE, LEG_PRICE, HVATKA_PRICE } from './gear';
 
 /* Стартовый каталог «За Чертой · 2035». Цены — в полисных еврорублях.
@@ -156,6 +157,8 @@ function buildMiscDefaults() {
     const eff = (c.effects || []).filter(function (e) { return e.amount && (e.skill || e.stat); }).map(function (e) { return '+' + e.amount + ' ' + (e.skill || { telo: 'Тело', reak: 'Реакция', vosp: 'Восприятие', razum: 'Разум', har: 'Характер', volya: 'Воля' }[e.stat]); }).join(', ');
     items.push({ cat: 'cassette', gearKey: c.key, kind: c.origOnly ? 'orig' : 'copy', name: 'Кассета «' + c.name + '»' + (c.origOnly ? '' : ', копия'), desc: [c.cls + ' · ' + c.cap, eff, c.text].filter(Boolean).join(' · '), price: c.origOnly ? 0 : c.price, notForSale: !!c.origOnly });
   });
+  /* Машины (глава 7, «Гараж») */
+  VEHICLES.forEach(function (v) { items.push({ cat: 'vehicle', gearKey: v.key, name: v.name, price: v.price || 0, notForSale: v.price == null, desc: 'Корпус ' + v.hull + ', броня ' + (v.armorType === 'none' ? '—' : v.armorHp) + ', Скорость ' + v.speed + ', Упр. ' + (v.handling > 0 ? '+' : '') + v.handling + ', мест ' + v.seats + ', таран ' + v.ram + (v.note ? '. ' + v.note : '') }); });
   return items.map(function (i) { return Object.assign({ id: uid() }, i); });
 }
 

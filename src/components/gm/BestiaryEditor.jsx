@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { db, ref, set, update } from '../../firebase';
 import { resolvePlayerHit, npcZoneMult, npcRaw, npcCritPatch } from '../../utils/hits';
 import { npcCritPen } from '../../utils/crits';
+import { movingPen } from '../../utils/vehicles';
 import { ARMOR_T, SHIELD_T, ZONES, aimPen } from '../../data/combat';
 import { DT, SD, SKD, WT, skLabel, NPC_SK, npcAtk, stName, stShort, wtLabel } from '../../data/stats';
 import { S } from '../../styles/ui';
@@ -92,8 +93,10 @@ function npcCurWill(s){return s.curWill!=null?s.curWill:((s.stats||{}).volya||0)
 function npcWillPen(s){return willPenalty(npcCurWill(s))+npcCritPen(s,"all")}
 function rollInitiative(){
   var list=[];
-  (pr.characters||[]).filter(function(x){return x.active}).forEach(function(pc){var inf=cF(pc);var rv=inf.fs.reak||0;var R=rollHit();list.push({id:pc._fbId,name:pc.name||"?",kind:"player",init:R.d+rv})});
-  Object.entries(spawned).forEach(function(e){var id=e[0];var s=e[1];var hp=s.hp!==undefined?s.hp:s.maxHp;if(hp<=0)return;var rv=(s.stats||{}).reak||0;var R=rollHit();list.push({id:id,name:s.name,kind:"npc",init:R.d+rv})});
+  /* Машина в бою — через водителя: в порядке хода видно, кто за рулём */
+  function carOf(id){var v=Object.values(pr.vehicles||{}).find(function(x){return x.driverId===id});if(!v)(pr.characters||[]).forEach(function(pc){(pc.garage||[]).forEach(function(g){if(g.driverId===id)v=g})});return v?v.name:""}
+  (pr.characters||[]).filter(function(x){return x.active}).forEach(function(pc){var inf=cF(pc);var rv=inf.fs.reak||0;var R=rollHit();list.push({id:pc._fbId,name:pc.name||"?",kind:"player",init:R.d+rv,car:carOf(pc._fbId)})});
+  Object.entries(spawned).forEach(function(e){var id=e[0];var s=e[1];var hp=s.hp!==undefined?s.hp:s.maxHp;if(hp<=0)return;var rv=(s.stats||{}).reak||0;var R=rollHit();list.push({id:id,name:s.name,kind:"npc",init:R.d+rv,car:carOf(id)})});
   if(!list.length)return;
   list.sort(function(a,b){return b.init-a.init});
   if(pr.saveInitiative)pr.saveInitiative({list:list,turn:0,round:1});
@@ -118,7 +121,9 @@ function npcAttack(s,w){
   var st=s.stats||{};var sk=s.skills||{};
   var na=npcAtk(st,sk,w);var rv=na.rv,skVal=na.skVal,skNm=na.skNm,atName=na.atName;
   var wp=npcWillPen(s);
-  var R=rollHit();var d=R.d;var aimP=(npcAim&&playerTgtId)?aimPen(playerZone):0;wp+=npcCritPen(s,"attack");var t=d+rv+skVal+(w.bonus||0)-aimP+wp;
+  var R=rollHit();var d=R.d;var aimP=(npcAim&&playerTgtId)?aimPen(playerZone):0;wp+=npcCritPen(s,"attack");
+  /* Стрельба на ходу: −2, водитель −4, дорожники без штрафа */
+  if((pr.scene||{}).moving){var sid=Object.keys(spawned).find(function(k){return spawned[k]===s});var drv=Object.values(pr.vehicles||{}).some(function(v){return v.driverId===sid});wp+=movingPen(drv,/дорожник/i.test(s.name||""))}var t=d+rv+skVal+(w.bonus||0)-aimP+wp;
   var tgtChar=playerTgtId?playerChars.find(function(x){return x._fbId===playerTgtId}):null;
   var tgtName=tgtChar?tgtChar.name:"";
   pr.addLog({who:s.name,type:"hit",label:""+w.name+(tgtName?" → "+tgtName:"")+(aimP?" "+playerZone+"(−"+aimP+")":"")+(R.crit?" крит":R.fumble?" срыв":""),detail:"d10("+d+")"+" + "+atName+"("+rv+") + "+skNm+"("+skVal+") + бонус("+(w.bonus||0)+")"+(aimP?" − прицел("+aimP+")":"")+(wp?" − деморализован("+Math.abs(wp)+")":"")+" = "+t,total:t});

@@ -14,7 +14,7 @@ return(<div className="n-card">
 return(<div key={e.id+"_"+i} style={{flexShrink:0,minWidth:100,padding:"8px 12px",borderRadius:0,background:cur?"rgba(138,59,34,.14)":"var(--color-sunken)",border:"1.5px solid "+(cur?"var(--color-accent)":"var(--color-divider)")}}>
 <div style={{fontSize:10,color:"var(--color-text-muted)",fontWeight:600}}>{"иниц. "+e.init}</div>
 <div style={{fontSize:14,fontWeight:700,color:cur?"var(--color-accent)":"var(--color-text)",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",maxWidth:100}}>{e.name}</div>
-<div style={{fontSize:11,color:"var(--color-text-muted)"}}>{e.kind==="npc"?"NPC":""}</div>
+<div style={{fontSize:11,color:"var(--color-text-muted)"}}>{(e.kind==="npc"?"NPC":"")+(e.car?(e.kind==="npc"?" · ":"")+"за рулём: "+e.car:"")}</div>
 </div>);
 })}
 </div>

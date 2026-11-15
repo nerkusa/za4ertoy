@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { r1 } from '../utils/dice';
 import { bleedAmount } from '../utils/crits';
 import { cF, hpOf } from '../utils/character';
-import { IconBattle, IconChat, IconLib, IconScroll, IconSkills, IconBracelet, IconBody, IconInv } from '../icons/index';
+import { IconCar, IconBattle, IconChat, IconLib, IconScroll, IconSkills, IconBracelet, IconBody, IconInv } from '../icons/index';
 import Dossier from './Dossier';
 import CreationWizard from './CreationWizard';
 import LifepathStep from './LifepathStep';
@@ -12,6 +12,7 @@ import SkillsTab from './tabs/SkillsTab';
 import BraceletTab from './tabs/BraceletTab';
 import BodyTab from './tabs/BodyTab';
 import InvTab from './tabs/InvTab';
+import GarageTab from './tabs/GarageTab';
 import CheatTab from './tabs/CheatTab';
 import CombatTab from './tabs/CombatTab';
 import CoopRollPopup from './combat/CoopRollPopup';
@@ -45,7 +46,7 @@ useEffect(function(){
   pr.save(Object.assign({},c,{curHp:nh,bleedTick:_turnKey}));
   if(pr.addLog)pr.addLog({who:c.name||"???",type:"crit",label:(c.name||"???")+": кровотечение −"+b+" Здоровья",detail:"начало хода · Здоровье "+h.cur+"→"+nh,total:b});
 },[_turnKey]);
-var tabs=[{id:"skills",l:"Навыки",ic:<IconSkills/>},{id:"combat",l:"Бой",ic:<IconBattle/>},{id:"bracelet",l:"Браслет",ic:<IconBracelet/>},{id:"body",l:"Тело",ic:<IconBody/>},{id:"bag",l:"Сумка",ic:<IconInv/>},{id:"chat",l:"Чат и лог",ic:<IconChat/>},{id:"library",l:"Лор",ic:<IconLib/>},{id:"guide",l:"Памятка",ic:<IconScroll/>}];
+var tabs=[{id:"skills",l:"Навыки",ic:<IconSkills/>},{id:"combat",l:"Бой",ic:<IconBattle/>},{id:"bracelet",l:"Браслет",ic:<IconBracelet/>},{id:"body",l:"Тело",ic:<IconBody/>},{id:"bag",l:"Сумка",ic:<IconInv/>}].concat((c.garage||[]).length||pr.isGM?[{id:"garage",l:"Гараж",ic:<IconCar/>}]:[]).concat([{id:"chat",l:"Чат и лог",ic:<IconChat/>},{id:"library",l:"Лор",ic:<IconLib/>},{id:"guide",l:"Памятка",ic:<IconScroll/>}]);
 var pendAtk=pr.pendAtk||{};var clearPA=pr.clearPendingAttack;var isGMv=pr.isGM;
 /* Лист не принят — игрок проходит пошаговое создание */
 if(!isGMv&&!c.locked)return <CreationWizard char={c} save={pr.save} addLog={pr.addLog}/>;
@@ -61,6 +62,7 @@ return(<div className="zc-main"><RollPopup roll={rP} onClose={function(){sRP(nul
 {tab==="combat"&&<CombatTab char={c} save={pr.save} logs={pr.logs} addLog={pr.addLog} onRoll={sRP} spawned={pr.spawned} saveSpawned={pr.saveSpawned} characters={pr.characters} isGM={pr.isGM} onNpcDeath={sNpcDeathEv} savePendingAttack={pr.savePendingAttack} room={pr.room} saveNpcHit={pr.saveNpcHit} shop={pr.shop} initiative={pr.initiative} saveInitiative={pr.saveInitiative}/>}
 {tab==="bracelet"&&<BraceletTab char={c} save={pr.save} onRoll={sRP} isGM={pr.isGM} addLog={pr.addLog} addGmLog={pr.addGmLog} shop={pr.shop} initiative={pr.initiative}/>}
 {tab==="body"&&<BodyTab char={c} save={pr.save} onRoll={sRP} isGM={pr.isGM} addLog={pr.addLog} shop={pr.shop} initiative={pr.initiative} changeAccount={pr.changeAccount}/>}
+{tab==="garage"&&<GarageTab char={c} save={pr.save} onRoll={sRP} isGM={pr.isGM} addLog={pr.addLog} shop={pr.shop}/>}
 {tab==="bag"&&<InvTab char={c} save={pr.save} shop={pr.shop} addLog={pr.addLog} onRoll={sRP}/>}
 {tab==="chat"&&<ChatTab chat={pr.chat} logs={pr.logs} sendChat={pr.sendChat} addLog={pr.addLog} onRoll={sRP} onCoopRoll={sCoopRoll} char={isGMv?null:c} characters={pr.characters} spawned={pr.spawned} who={isGMv?"Мастер":(c.name||"???")} coopTarget={coopTarget} onCoopConsumed={function(){sCoopTarget(null)}}/>}
 {tab==="library"&&<LibTab lore={pr.lore} mapData={pr.mapData} saveMap={pr.saveMap} characters={pr.characters} isGM={pr.isGM} charId={c._fbId}/>}

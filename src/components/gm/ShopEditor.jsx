@@ -5,6 +5,7 @@ import { uid } from '../../utils/dice';
 import { priceNum, fmtMoney } from '../../utils/currency';
 import { CASS_KINDS, BRACELETS } from '../../data/gear';
 import { getTraits } from '../../utils/traitStore';
+import { VEHICLES } from '../../data/vehicles';
 import { buildShopDefaults, buildMiscDefaults } from '../../data/shopDefaults';
 import LiveField from '../LiveField';
 
@@ -20,6 +21,7 @@ const CATS = [
   { id: 'ammo', name: 'Патроны', color: '#5a4a2a' },
   { id: 'cassette', name: 'Кассеты', color: '#211d18' },
   { id: 'solution', name: 'Солюшны', color: '#6b2f4a' },
+  { id: 'vehicle', name: 'Машины', color: '#5a4a2a' },
 ];
 const SOL_KINDS = [{ id: 'bracelet', name: 'Браслет' }, { id: 'arm', name: 'Протез руки' }, { id: 'hvatka', name: '«Хватка»' }, { id: 'leg', name: 'Нога «Опора»' }, { id: 'tip', name: 'Насадка на руку' }, { id: 'legtip', name: 'Насадка на ногу' }, { id: 'implant', name: 'Вживляемое / накладное' }];
 
@@ -76,6 +78,7 @@ export default function ShopEditor(pr) {
       item: { cat: 'item', name: 'Новый предмет', desc: '', price: 0, ptype: '', dice: '' },
       ammo: { cat: 'ammo', name: 'Патроны', desc: '', price: 10, ptype: 'Пуля', bundleQty: 10 },
       cassette: { cat: 'cassette', name: 'Новая кассета', gearKey: (getTraits().cassettes[0] || {}).key, kind: 'copy', price: 100, desc: '' },
+      vehicle: { cat: 'vehicle', name: 'Багги', gearKey: 'buggy', price: 600, desc: '' },
       solution: { cat: 'solution', name: 'Новый солюшн', sol: 'implant', gearKey: (getTraits().implants[0] || {}).key, price: 100, desc: '' },
     }[cat];
     const it = Object.assign({ id: uid() }, base);
@@ -106,6 +109,7 @@ export default function ShopEditor(pr) {
     if (it.cat === 'shield') { const s = SHIELD_T.find(function (x) { return x.id === it.type; }); return (s ? s.name + ' ' + (s.absorb * 100) + '%' : it.type) + ' · ' + it.hp + ' HP' + (it.desc ? ' · ' + it.desc : ''); }
     if (it.cat === 'weapon') { const h = it.hands === 2 ? 'двуруч.' : it.hands === 1.5 ? 'полуторн.' : 'одноруч.'; return it.wtype + ' · ' + it.dmgDice + (it.bonus ? '+' + it.bonus : '') + ' · ' + it.dmgType + ' · ' + h + (it.desc ? ' · ' + it.desc : ''); }
     if (it.cat === 'cassette') { const cd = getTraits().cassettes.find(function (x) { return x.key === it.gearKey; }); return (cd ? cd.cls + ' · ' + cd.name : it.gearKey) + ' · ' + ((CASS_KINDS.find(function (k) { return k.id === it.kind; }) || {}).name || it.kind) + (it.desc ? ' · ' + it.desc : ''); }
+    if (it.cat === 'vehicle') { return 'Машина' + (it.desc ? ' · ' + it.desc : ''); }
     if (it.cat === 'solution') { return ((SOL_KINDS.find(function (k) { return k.id === it.sol; }) || {}).name || it.sol) + (it.desc ? ' · ' + it.desc : ''); }
     const parts = [];
     if (it.desc) parts.push(it.desc);
@@ -187,6 +191,16 @@ export default function ShopEditor(pr) {
           {priceField(it)}
           {field('Описание (для игроков)', <LiveField tag="textarea" value={it.desc || ''} onCommit={function (val) { upd(it.id, { desc: val }); }} style={Object.assign({}, inp, { minHeight: 40, resize: 'vertical' })} />)}
           <div style={{ fontSize: 11, color: '#6a6052' }}>Палёнка в каталоге и в логе выглядит для игрока как оригинал.</div>
+        </div>
+      );
+    }
+    if (it.cat === 'vehicle') {
+      return (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 6 }}>
+          {field('Название в каталоге', <LiveField value={it.name} onCommit={function (val) { upd(it.id, { name: val }); }} style={inp} />)}
+          {field('Машина', <select value={it.gearKey} onChange={function (e) { upd(it.id, { gearKey: e.target.value }); }} style={inp}>{VEHICLES.map(function (v) { return <option key={v.key} value={v.key}>{v.name}</option>; })}</select>)}
+          {priceField(it)}
+          {field('Описание', <LiveField tag="textarea" value={it.desc || ''} onCommit={function (val) { upd(it.id, { desc: val }); }} style={Object.assign({}, inp, { minHeight: 40, resize: 'vertical' })} />)}
         </div>
       );
     }

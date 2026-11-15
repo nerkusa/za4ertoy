@@ -4,6 +4,7 @@ import { uid } from './dice';
 import { SHIELD_T } from '../data/combat';
 import { patchFromShopItem } from './gearOps';
 import { kindName } from '../data/gear';
+import { newVehicle } from '../data/vehicles';
 
 function grantPatch(c,cat,it,opts){
   opts=opts||{};
@@ -17,6 +18,7 @@ function grantPatch(c,cat,it,opts){
   }
   if(it.cat==="armor")return{armors:(c.armors||[]).concat([{id:uid(),name:it.name,type:it.type,slot:it.slot||"body",hp:it.hp,maxHp:it.hp,desc:it.desc||""}])};
   if(it.cat==="shield"){var t=SHIELD_T.find(function(x){return x.id===it.type})||SHIELD_T[0];return{shields:(c.shields||[]).concat([{id:uid(),name:it.name,type:it.type,absorb:t.absorb,hp:it.hp,maxHp:it.hp,desc:it.desc||""}])}}
+  if(it.cat==="vehicle"){var nv=newVehicle(it.gearKey);if(!nv)return{error:"Нет такой машины"};return{garage:(c.garage||[]).concat([nv])}}
   if(it.cat==="cassette")return patchFromShopItem(c,cat,Object.assign({},it,{kind:opts.kind||it.kind||"copy"}));
   if(it.cat==="solution")return patchFromShopItem(c,cat,it,null);
   /* вещи, патроны, ремкомплекты, расходники */
