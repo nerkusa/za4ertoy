@@ -24,7 +24,7 @@ function next(){if(errs.length){sTried(true);return}sTried(false);sStep(step+1);
 function back(){sTried(false);sStep(step-1)}
 function finish(){
   for(var i=0;i<5;i++){if(stepErrors(cr,i,profs).length){sStep(i);sTried(true);return}}
-  if(!window.confirm("Принять персонажа? Характеристики и навыки после этого меняет только мастер (и очки за уровень)."))return;
+  if(!window.confirm("Принять персонажа? Характеристики и навыки после этого меняет только мастер (и очки за уровень). Дальше — шаг 7, жизненный путь."))return;
   var r=finishPatch(c,cat,cr,profs);
   sv(Object.assign({},c,r.patch));
   if(pr.addLog)pr.addLog({who:cr.name,type:"give",label:cr.name+" создан: "+((profs.find(function(p){return p.id===cr.profession})||{}).name||"")+", "+(ORIGINS.find(function(o){return o.id===cr.origin})||{}).name.toLowerCase(),detail:r.kitNames.length?"Стартовый набор: "+r.kitNames.join(", "):"",total:0});

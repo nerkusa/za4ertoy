@@ -132,6 +132,8 @@ function PartyCard(pr) {
           <dt>Опыт</dt><dd>{xpp.got + '/' + xpp.need + ' до ур.' + (xpp.level + 1) + (xpp.ready ? ' · готов' : '') + ' · награда: +1 очко навыка и +2 Здоровья'}</dd>
           <dt>Браслет</dt><dd>{b ? b.name + ' · свободно ' + ni.free + ' из ' + ni.total : 'нет'}</dd>
           <dt>В гнёздах</dt><dd>{inNest.length ? inNest.map(function (x) { const d = findBy(cat.cassettes, x.key); return (d ? d.name : x.key) + ' (' + kindName(x.kind) + (x.kind === 'fake' && x.fakeState ? ': ' + (x.fakeState === 'silent' ? 'молчит' : x.fakeState === 'copy' ? 'как копия' : 'застряла') : '') + (x.kind === 'slep' ? ', отпечаток ' + (x.imprint || 0) + ' ' + IMPRINT_STAGES[x.imprint || 0] : '') + ')'; }).join('; ') : '—'}</dd>
+          {(c.debts || []).length > 0 && <React.Fragment><dt>Долги</dt><dd>{c.debts.map(function (d) { return d.amount + ' ер. ' + (d.to || ''); }).join(', ')}</dd></React.Fragment>}
+          {c.lifeImprint ? <React.Fragment><dt>Отпечаток</dt><dd>{'с жизненного пути: ' + c.lifeImprint}</dd></React.Fragment> : null}
           <dt>Солюшны</dt><dd>{solutionList(c, cat).map(function (x) { return x.name; }).join(', ') || '—'}{' · шагов железа: ' + steps + (stage ? ' (' + stage.name + ')' : '')}</dd>
         </dl>
         <div className="row">
@@ -155,6 +157,8 @@ function PartyCard(pr) {
           <button className="btn sm" title="d30 по таблице безделушек, в сумку" onClick={function () { const t = rollTrinket(r1); save(grantPatch(c, getTraits(), t.item)); log('Безделушка', c.name + ': d30 = ' + t.roll + ' — ' + t.item.desc + ' (' + t.item.price + ' ер.)'); if (pr.addLog) pr.addLog({ who: 'ГМ', type: 'give', label: 'ГМ выдал безделушку → ' + (c.name || '?'), detail: t.item.desc, total: 0 }); }}>Безделушка</button>
           <button className="btn sm" onClick={function () { save({ molva: Math.max(-5, (c.molva || 0) - 1) }); }}>Молва −</button>
           <button className="btn sm" onClick={function () { save({ molva: Math.min(5, (c.molva || 0) + 1) }); }}>Молва +</button>
+          {c.lifepath && !c.lifepath.done && <button className={'btn sm' + (c.lifepathReroll ? ' main' : '')} onClick={function () { save({ lifepathReroll: !c.lifepathReroll }); log('Жизненный путь', c.name + (c.lifepathReroll ? ': переброс запрещён' : ': переброс разрешён')); }}>{c.lifepathReroll ? 'Переброс разрешён' : 'Разрешить переброс жизненного пути'}</button>}
+          {c.lifepath && c.lifepath.done && <button className="btn sm" title="Игрок снова пройдёт шаг 7; эффекты прошлых бросков останутся — правь лист вручную" onClick={function () { if (window.confirm('Вернуть игрока на шаг 7? Прошлые эффекты жизненного пути не откатятся.')) save({ lifepath: { done: false, roots: [], inner: [], years: [] }, lifepathReroll: true }); }}>Жизненный путь заново</button>}
           <button className="btn sm" style={{ borderColor: 'var(--rust)', color: 'var(--rust)' }} onClick={del}>Удалить</button>
         </div>}
         <CritsCard char={c} save={function (d) { pr.saveChar(c._fbId, d); }} isGM={true} addLog={pr.addLog} />

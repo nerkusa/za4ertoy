@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { cF } from '../../utils/character';
+import { cF, bioLines } from '../../utils/character';
 import { getTraits } from '../../utils/traitStore';
 import { getProfs } from '../../utils/profStore';
 import { ORIGINS, originOf } from '../../data/professions';
@@ -151,9 +151,13 @@ return(<div style={{display:"flex",flexDirection:"column",gap:12}}>
   <div className="log">{IRON_STAGES.map(function(st){var on=steps>=st.at;return <div key={st.at} className="logrow" style={{gridTemplateColumns:"34px 1fr",opacity:on?1:.45}}><span className="tm">{st.at+"+"}</span><span><b>{st.name}</b>{" — "+st.text}</span></div>})}</div>
 </div>
 
+{(c.debts||[]).length>0&&<div className="sec rust">
+  <h3>Долги</h3>
+  {(c.debts||[]).map(function(d){return <div key={d.id||d.to} className="row" style={{justifyContent:"space-between"}}><span>{d.amount+" ер. "+(d.to||"")}</span>{gm&&<button className="btn sm" onClick={function(){sv(Object.assign({},c,{debts:(c.debts||[]).filter(function(x){return x!==d})}))}}>Погашен</button>}</div>})}
+</div>}
 <div className="sec">
   <h3>Био</h3>
-  <LiveField tag="textarea" style={{minHeight:80,resize:"vertical",width:"100%"}} value={c.bio||""} onCommit={function(val){sv(Object.assign({},c,{bio:val}))}}/>
+  <LiveField tag="textarea" style={{minHeight:80,resize:"vertical",width:"100%"}} value={bioLines(c).join("\n")} onCommit={function(val){sv(Object.assign({},c,{bio:val?val.split("\n"):[]}))}}/>
 </div>
 {!gm&&pr.changeAccount&&<AccountCard login={c._fbId} changeAccount={pr.changeAccount}/>}
 </div>)}

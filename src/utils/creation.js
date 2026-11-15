@@ -110,7 +110,7 @@ function kitPatch(c,cat,cr){
 /* Итоговый патч персонажа при «Принять» */
 function finishPatch(c,cat,cr,profs){
   var stats=finalStats(cr);var skills=finalSkills(cr,profs);
-  var patch={name:cr.name.trim(),origin:cr.origin,age:parseInt(cr.age),profession:cr.profession,stats:stats,skills:skills,lockedSkills:Object.assign({},skills),locked:true,curHp:null,curWill:null,creation:cr};
+  var patch={lifepath:c.lifepath&&c.lifepath.done?c.lifepath:{done:false,roots:[],inner:[],years:[]},name:cr.name.trim(),origin:cr.origin,age:parseInt(cr.age),profession:cr.profession,stats:stats,skills:skills,lockedSkills:Object.assign({},skills),locked:true,curHp:null,curWill:null,creation:cr};
   var names=[];
   if(!c.kitGiven){var k=kitPatch(c,cat,cr);Object.assign(patch,k.patch);patch.kitGiven=true;names=k.names}
   return{patch:patch,kitNames:names};

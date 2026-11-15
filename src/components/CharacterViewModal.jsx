@@ -1,7 +1,7 @@
 import React from 'react';
 import { SD, SKD, skLabel } from '../data/stats';
 import { originOf } from '../data/professions';
-import { cF, mHP } from '../utils/character';
+import { cF, mHP, bioLines } from '../utils/character';
 import { getProfs } from '../utils/profStore';
 
 /* Окно поверх приложения — только просмотр чужого персонажа (статы, снаряжение, био) */
@@ -56,9 +56,9 @@ return(<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.6)",displa
   </div>
 </div>}
 
-{c.bio&&<div>
+{bioLines(c).length>0&&<div>
   <div style={{fontSize:10,fontWeight:700,textTransform:"uppercase",color:"var(--color-text-muted)",marginBottom:6}}>Био</div>
-  <div style={{fontSize:12,color:"var(--color-text-muted)",lineHeight:1.6,fontStyle:"italic"}}>{c.bio}</div>
+  <div style={{fontSize:12,color:"var(--color-text-muted)",lineHeight:1.6,fontStyle:"italic"}}>{bioLines(c).map(function(l,i){return <div key={i}>{l}</div>})}</div>
 </div>}
 
 </div>

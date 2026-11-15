@@ -5,6 +5,7 @@ import { cF, hpOf } from '../utils/character';
 import { IconBattle, IconChat, IconLib, IconScroll, IconSkills, IconBracelet, IconBody, IconInv } from '../icons/index';
 import Dossier from './Dossier';
 import CreationWizard from './CreationWizard';
+import LifepathStep from './LifepathStep';
 import PartyRail from './PartyRail';
 import ChatTab from './tabs/ChatTab';
 import SkillsTab from './tabs/SkillsTab';
@@ -48,6 +49,8 @@ var tabs=[{id:"skills",l:"Навыки",ic:<IconSkills/>},{id:"combat",l:"Бой
 var pendAtk=pr.pendAtk||{};var clearPA=pr.clearPendingAttack;var isGMv=pr.isGM;
 /* Лист не принят — игрок проходит пошаговое создание */
 if(!isGMv&&!c.locked)return <CreationWizard char={c} save={pr.save} addLog={pr.addLog}/>;
+/* Шаг 7 — жизненный путь — после «Принять» */
+if(!isGMv&&c.lifepath&&!c.lifepath.done)return <LifepathStep char={c} save={pr.save} addLog={pr.addLog} room={pr.room}/>;
 return(<div className="zc-main"><RollPopup roll={rP} onClose={function(){sRP(null)}}/>{!isGMv&&<PendingAttackPopup attacks={pendAtk} myId={pr.char._fbId} myChar={pr.char} clearPendingAttack={clearPA} addLog={pr.addLog} onRoll={sRP} room={pr.room}/>}{!isGMv&&<PlayerAttackStatus attacks={pendAtk} myName={pr.char.name} myId={pr.char._fbId} room={pr.room} spawned={pr.spawned||{}} saveSpawned={pr.saveSpawned} addLog={pr.addLog} onRoll={sRP} saveNpcHit={pr.saveNpcHit}/>}{isGMv&&<GMAttackPanel attacks={pendAtk} clearPendingAttack={clearPA} characters={pr.characters||[]} room={pr.room} addLog={pr.addLog} onRoll={sRP}/>}{!isGMv&&(function(){var myEvs=Object.entries(pr.dmgEvents||{}).filter(function(e){return e[1]&&pr.char._fbId===e[0]});if(myEvs.length===0)return null;var ev=myEvs[0];return <DamagePopup event={ev[1]} onClose={function(){if(pr.clearDmgEvent)pr.clearDmgEvent(ev[0]);}}/>;})()}{isGMv&&npcDeathEv&&<NpcDeathPopup event={npcDeathEv} onClose={function(){sNpcDeathEv(null)}}/>}{isGMv&&<PlayerAttackNotif attacks={pendAtk} clearPendingAttack={clearPA} spawned={pr.spawned||{}} saveSpawned={pr.saveSpawned} addLog={pr.addLog} onRoll={sRP} room={pr.room}/>}{!isGMv&&c.levelUpPending&&<LevelUpPopup pending={c.levelUpPending} onAccept={function(){pr.save(Object.assign({},c,{levelUpPending:null}))}}/>}<CoopRollPopup roll={coopRoll} onClose={function(){sCoopRoll(null)}}/>
 <div className="zc-scroll">
 <Dossier char={c} save={pr.save} isGM={pr.isGM} initiative={pr.initiative} onBack={pr.onBack}/>

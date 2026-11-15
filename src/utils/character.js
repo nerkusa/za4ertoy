@@ -75,13 +75,15 @@ function cF(c){
    levelHp копится при повышении уровня (+2 за уровень с правил v3):
    у старых персонажей прошлые уровни не пересчитываются. */
 function mHP(f,c){
-  var base=(f.telo||0)*2+(f.reak||0)*2+((c&&c.hpRoll)||0)+((c&&c.levelHp)||0);
+  var base=(f.telo||0)*2+(f.reak||0)*2+((c&&c.hpRoll)||0)+((c&&c.levelHp)||0)+((c&&c.bonusHp)||0);
   if(!c)return Math.max(1,base);
   var bonus=0;
   activeTraitEffects(c,getTraits()).forEach(function(e){if(e.type==="hp_flat"||e.type==="max_hp")bonus+=(e.amount||0)});
   return Math.max(1,base+bonus);
 }
-function nC(name){return{name:name||"",level:1,xp:0,portrait:"",bio:"",locked:false,
+/* Биография — список строк (старый текст читается как одна строка) */
+function bioLines(c){var b=c&&c.bio;if(Array.isArray(b))return b;return b?String(b).split("\n"):[]}
+function nC(name){return{name:name||"",level:1,xp:0,portrait:"",bio:[],locked:false,
   curHp:null,hpOv:null,curWill:null,willOv:null,hpRoll:r1(10),
   weapons:[],armors:[],equippedHead:null,equippedBody:null,shield:null,shieldHp:0,shieldMaxHp:0,equippedWeapon:null,weaponMode:"1h",
   inventory:[],shakenPenalty:0,broken:false,
@@ -142,4 +144,4 @@ function willOf(c,fs){var mx=c.willOv||fs.volya||1;var cur=c.curWill!==null&&c.c
 /* Здоровье словами — для «Немоты» (5+ шагов железа, без планшета) */
 function hpWords(cur,max){var p=max>0?cur/max:0;if(p>=0.7)return"легко";if(p>=0.35)return"плохо";return"очень плохо"}
 
-export { STAT_POINTS, SKILL_POINTS, statSpent, skillSpent, statCap, skillCap, iS, iSk, uSP, uSkP, gE, cF, mHP, nC, rnd, rndStats, rndCore, xpForLevel, xpProgress, levelUpReward, LEVEL_REWARDS, willPenalty, dosePenalty, diseasePenalty, hpOf, willOf, hpWords };
+export { bioLines, STAT_POINTS, SKILL_POINTS, statSpent, skillSpent, statCap, skillCap, iS, iSk, uSP, uSkP, gE, cF, mHP, nC, rnd, rndStats, rndCore, xpForLevel, xpProgress, levelUpReward, LEVEL_REWARDS, willPenalty, dosePenalty, diseasePenalty, hpOf, willOf, hpWords };

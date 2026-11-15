@@ -400,3 +400,51 @@ describe('каталог и бестиарий v3', function(){
     expect(byName['Голос'].zoneMult['Голова']).toBe(1);expect(byName['Лентач-сборщик'].halfKR).toBe(true);
   });
 });
+
+describe('жизненный путь', function(){
+  var L=require('../utils/lifepath');var D=require('../data/lifepath');var CH=require('../utils/character');
+  function seq(arr){var i=0;return function(){return arr[i++%arr.length]}}
+  test('таблицы по 10 строк, диапазоны покрывают 1–10', function(){
+    [D.PRE_ROOTS.parents,D.PRE_ROOTS.where2012,D.PRE_ROOTS.family,D.POST_ROOTS.born,D.POST_ROOTS.raised,D.POST_ROOTS.family,D.INNER.character,D.INNER.values,D.INNER.polis,D.PRE_YEARS.bad,D.PRE_YEARS.good,D.AFTER.bad,D.AFTER.good,D.CHILDHOOD,D.FRIEND.who,D.FRIEND.how,D.ENEMY.who,D.ENEMY.why,D.ENEMY.what,D.LOVE.tragedy,D.LOVE.hard].forEach(function(t){expect(t.length).toBe(10)});
+    for(var n=1;n<=10;n++){expect(D.inRange(D.FRIEND.close,n)).toBeTruthy();expect(D.inRange(D.ENEMY.power,n)).toBeTruthy();expect(D.inRange(D.LOVE.how,n)).toBeTruthy()}
+  });
+  test('число пятилеток по книге', function(){
+    expect(L.periods("post",22).map(function(p){return p.table})).toEqual(["child","child","after","after"]);
+    expect(L.periods("post",18).length).toBe(3);
+    var pre=L.periods("pre",52);expect(pre.filter(function(p){return p.table==="pre"}).length).toBe(Math.floor((2012-1983-15)/5));expect(pre.filter(function(p){return p.table==="after"}).length).toBe(4);
+    expect(L.periods("pre",45).filter(function(p){return p.table==="pre"}).length).toBe(1);
+  });
+  test('ветвление: 1–4 удача/беда по чётности, 5–7 друг/враг, 8–9 любовь, 10 тихие годы', function(){
+    var p={from:2023,to:2028,table:"after"};
+    expect(L.rollPeriod(p,seq([2,4,1])).t).toMatch(/^Удача: Довоенный тайник/);
+    expect(L.rollPeriod(p,seq([2,3,6])).t).toMatch(/^Беда: Долг/);
+    expect(L.rollPeriod(p,seq([6,2,1,6,7])).kind).toBe("friend");
+    var en=L.rollPeriod(p,seq([5,1,3,5,4,9]));expect(en.kind).toBe("enemy");expect(en.power).toMatch(/С властью/);
+    expect(L.rollPeriod(p,seq([9,5,5])).t).toMatch(/трагическая: Переписали кассетами/);
+    expect(L.rollPeriod(p,seq([10])).kind).toBe("quiet");
+    expect(L.rollPeriod({from:2013,to:2018,table:"child"},seq([9])).t).toMatch(/подавал ключи/);
+  });
+  test('пример Гайки: +1 к Механике, друг Бублик, контакт для мастера', function(){
+    var c=Object.assign(CH.nC("Гайка"),{origin:"post",age:22,profession:"montyor",skills:Object.assign(CH.nC().skills,{"Механика":5})});
+    var lp={roots:L.rollRoots("post",seq([1,5,3])),inner:L.rollInner(seq([9,8,3])),years:[]};
+    var per=L.periods("post",22);
+    lp.years=[L.rollPeriod(per[0],seq([9])),L.rollPeriod(per[1],seq([8])),Object.assign(L.rollPeriod(per[2],seq([6,2,1,6,7])),{nick:"Бублик"}),L.rollPeriod(per[3],seq([9,5,5]))];
+    expect(lp.roots[0].t).toBe("В бараке Мирного");expect(lp.inner[2].t).toBe("Бизнес йегерей");
+    var r=L.applyLifepath(c,CAT,lp);
+    expect(r.patch.skills["Механика"]).toBe(6);expect(r.skillsUsed).toBe(1);
+    expect(r.contacts).toHaveLength(1);expect(r.contacts[0]).toMatchObject({kind:"friend",nick:"Бублик"});
+    expect(r.patch.bio[0]).toBe("Где родился: В бараке Мирного");expect(r.patch.bio.some(function(l){return /^2028–2033: Любовь, трагическая/.test(l)})).toBe(true);
+    expect(r.patch.lifepath.done).toBe(true);
+  });
+  test('пределы: не больше +2 к навыкам и 100 ер.; сверх — без эффекта', function(){
+    var c=Object.assign(CH.nC("x"),{origin:"pre",age:60,profession:"strelok"});
+    var ev=function(t,fx){return{label:"x",kind:"good",t:t,fx:fx}};
+    var r=L.applyLifepath(c,CAT,{roots:[],inner:[],years:[ev("a",{skill:"Огнестрел",amount:1}),ev("b",{skill:"Знания",amount:1}),ev("c",{skill:"Выживание",amount:1}),ev("d",{money:100}),ev("e",{money:50}),ev("f",{dose:2})]});
+    expect(r.skillsUsed).toBe(2);expect(r.patch.skills["Выживание"]).toBe(0);expect(r.patch.money).toBe(100);expect(r.skipped.length).toBe(2);expect(r.patch.dose).toBe(2);
+    expect(r.patch.bio.filter(function(l){return /без эффекта/.test(l)}).length).toBe(2);
+  });
+  test('потеря конечности: «Хватка» или «Опора» и долг хирургу', function(){
+    var r=L.applyLifepath(CH.nC("x"),CAT,{roots:[],inner:[],years:[{label:"y",kind:"bad",t:"t",fx:{prosthesis:"roll",debt:200,debtTo:"хирургу"}}]},function(){return 2});
+    expect(r.patch.prostheses.legR).toMatchObject({grade:"new",tip:"stopa"});expect(r.patch.debts[0].amount).toBe(200);
+  });
+});
