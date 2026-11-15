@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { db, ref, set, get, onValue, update, remove, authChangeAccount, authDeleteAccount } from './firebase';
 import { CSS } from './styles/globalCss';
 import { nC } from './utils/character';
+import { migrateChar, needsMigration } from './utils/migrate';
 import { buildShopDefaults, buildMiscDefaults } from './data/shopDefaults';
 import { buildNpcDefaults } from './data/npcDefaults';
 import { setProfs } from './utils/profStore';
@@ -68,6 +69,8 @@ get(ref(db,"rooms/"+room+"/seeded")).then(function(snap){
   set(ref(db,"rooms/"+room+"/shop"),buildShopDefaults().concat(buildMiscDefaults()));
   set(ref(db,"rooms/"+room+"/npcTemplates"),buildNpcDefaults());
 })},[room,isGM]);
+/* Старый персонаж игрока: один раз записываем его в схеме v3 */
+useEffect(function(){if(!room||isGM||!pId)return;var mine=chars[pId];if(mine&&needsMigration(mine))set(ref(db,"rooms/"+room+"/characters/"+pId),migrateChar(mine))},[room,isGM,pId,chars[pId]]);
 /* Персонаж игрока привязан к логину — создаём один раз, если ещё нет */
 useEffect(function(){if(!room||isGM||!pId)return;
 get(ref(db,"rooms/"+room+"/characters/"+pId)).then(function(snap){
@@ -128,7 +131,8 @@ function leave(){
 }
 var _sd=useState(false);var showDonate=_sd[0];var sShowDonate=_sd[1];var _sb2=useState(false);var showBestApp=_sb2[0];var sShowBestApp=_sb2[1];
 if(!auth)return <Login onAuth={handleAuth}/>;
-var ca=Object.entries(chars).map(function(e){return Object.assign({},e[1],{_fbId:e[0]})});
+/* Персонажи читаются уже в схеме v3 (migrateChar); сохраняет миграцию только сам игрок */
+var ca=Object.entries(chars).map(function(e){return Object.assign({},migrateChar(e[1]),{_fbId:e[0]})});
 setProfs(profsData);setTraits(traitsData);setScene(scene);
 return(<div className="zc-app"><style>{CSS}</style>
 {showDonate&&<DonatePage onClose={function(){sShowDonate(false)}} isGM={isGM} saveMap={saveMap} mapData={mapData}/>}

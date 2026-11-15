@@ -494,3 +494,21 @@ describe('машины', function(){
     expect(V.movingPen(true,false)).toBe(-4);expect(V.movingPen(false,true)).toBe(0);expect(V.movingPen(false,false)).toBe(-2);
   });
 });
+
+describe('миграция v3', function(){
+  var M=require('../utils/migrate');var CH=require('../utils/character');
+  var old={name:"Старый",level:4,xp:700,stats:{telo:6,reak:6,vosp:5,razum:4,har:4,volya:5},skills:{"Огнестрел":4,"Торг":2},lockedSkills:{"Огнестрел":4,"Торг":2},locked:true,
+    bio:"Жил на 312-м.\nВоевал.",diseases:["Клещ"],solutions:{arm:{grade:"new",tip:"kleshnya",tips:["kist","kleshnya"],broken:false},leg:{grade:"new"},implants:[],addons:[]},hpRoll:6,curHp:20};
+  test('добавляет Вождение, crits, prostheses, bio[], reputation; болезни — объекты', function(){
+    var m=M.migrateChar(old);
+    expect(m.skills["Вождение"]).toBe(0);expect(m.lockedSkills["Вождение"]).toBe(0);expect(m.crits).toEqual([]);expect(m.reputation).toEqual({});
+    expect(m.prostheses.armR.tip).toBe("kleshnya");expect(m.prostheses.legR).toMatchObject({grade:"new",tip:"stopa"});expect(m.prostheses.armTips).toEqual(["kleshnya"]);
+    expect(m.solutions.arm).toBeNull();expect(m.bio).toEqual(["Жил на 312-м.","Воевал."]);expect(m.diseases).toEqual([{key:"kleshch",name:"Клещ"}]);
+  });
+  test('характеристики и прошлые уровни не пересчитываются', function(){
+    var m=M.migrateChar(old);expect(m.stats).toEqual(old.stats);expect(m.level).toBe(4);expect(m.levelHp).toBeUndefined();
+    expect(CH.mHP(CH.cF(m).fs,m)).toBe(CH.mHP(CH.cF(old).fs,old));
+    expect(CH.cF(m).eSk["Ближний бой"]).toBe(2);
+  });
+  test('новый персонаж миграции не требует', function(){expect(M.needsMigration(CH.nC("x"))).toBe(false);expect(M.needsMigration(M.migrateChar(old))).toBe(false)});
+});
