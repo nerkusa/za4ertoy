@@ -70,13 +70,7 @@ describe('cF: эффекты кассет и насадок', function(){
     expect(cF(ch({bracelet:{model:"Civil"},cassettes:[cass("torgash","fake",{fakeState:"copy"})]})).eSk["Торг"]).toBe(2);
     expect(fakeOutcome(1)).toBe("silent");expect(fakeOutcome(4)).toBe("silent");expect(fakeOutcome(5)).toBe("copy");expect(fakeOutcome(8)).toBe("copy");expect(fakeOutcome(9)).toBe("stuck");expect(fakeOutcome(10)).toBe("stuck");
   });
-  test('насадка даёт бонус, сломанная — нет', function(){
-    var c=ch({});c=Object.assign(c,giveSolution(c,CAT,{t:"arm"}));c=Object.assign(c,giveSolution(c,CAT,{t:"tip",key:"kleshnya"}));c=Object.assign(c,setTip(c,CAT,"kleshnya"));
-    expect(cF(c).eSk["Ближний бой"]).toBe(2);
-    expect(fineBlocked(c,CAT,"Медицина")).toBe(true);expect(fineBlocked(c,CAT,"Атлетика")).toBe(false);
-    var broken=Object.assign({},c,{solutions:Object.assign({},c.solutions,{arm:Object.assign({},c.solutions.arm,{broken:true})})});
-    expect(cF(broken).eSk["Ближний бой"]).toBe(0);
-  });
+
   test('«Хватка»: −2 к тонкой работе, без гнезда', function(){
     var c=ch({bracelet:{model:"Civil"}});c=Object.assign(c,giveSolution(c,CAT,{t:"hvatka"}));
     expect(cF(c).eSk["Медицина"]).toBe(-2);expect(nestInfo(c,CAT).free).toBe(3);expect(ironSteps(c,CAT)).toBe(0);
@@ -106,14 +100,7 @@ describe('браслет и гнёзда', function(){
     var c=ch({bracelet:{model:"Military"},cassettes:[cass("torgash","copy")]});
     expect(canInsert(c,{id:"z",key:"torgash",kind:"orig",inNest:false},CAT).ok).toBe(false);
   });
-  test('насадка «Ствол» появляется в оружии, пока надета', function(){
-    var c=ch({});c=Object.assign(c,giveSolution(c,CAT,{t:"arm"}));c=Object.assign(c,giveSolution(c,CAT,{t:"tip",key:"stvol"}));
-    expect(c.weapons.length).toBe(0);
-    c=Object.assign(c,setTip(c,CAT,"stvol"));
-    expect(c.weapons.length).toBe(1);expect(c.weapons[0].dmgDice).toBe("3d6");expect(c.weapons[0].type).toBe("Guns");
-    c=Object.assign(c,setTip(c,CAT,"kist"));expect(c.weapons.length).toBe(0);
-    expect(gearWeapons(c,CAT).length).toBe(0);expect(syncGearWeapons(c,CAT,gearWeapons).weapons.length).toBe(0);
-  });
+
 });
 
 describe('штрафы Дозы и болезни', function(){
@@ -186,14 +173,7 @@ describe('шум кассет, износ насадки, слепки', functio
     var fx=fumbleFx(c,cF(c),"Скрытность",FUMBLE,3);
     expect(fx.patch.cassettes[0].imprint).toBe(3);
   });
-  test('срыв с бонусом насадки ломает её; перебранный протез — ещё и на базовой 2', function(){
-    var c=ch({});c=Object.assign(c,giveSolution(c,CAT,{t:"arm"}));c=Object.assign(c,giveSolution(c,CAT,{t:"tip",key:"instrument"}));c=Object.assign(c,setTip(c,CAT,"instrument"));
-    expect(fumbleFx(c,cF(c),"Механика",FUMBLE).patch.solutions.arm.broken).toBe(true);
-    expect(fumbleFx(c,cF(c),"Механика",TWO).patch.solutions).toBeUndefined();
-    expect(fumbleFx(c,cF(c),"Медицина",FUMBLE).patch.solutions).toBeUndefined();
-    var rb=Object.assign({},c,{solutions:Object.assign({},c.solutions,{arm:Object.assign({},c.solutions.arm,{grade:"rebuilt"})})});
-    expect(fumbleFx(rb,cF(rb),"Механика",TWO).patch.solutions.arm.broken).toBe(true);
-  });
+
   test('стойкость слепка: СЛ 12 + 2 × Отпечаток, −2 за каждый другой слепок', function(){
     expect(slepDC(0)).toBe(12);expect(slepDC(3)).toBe(18);
     var c=ch({stats:{telo:1,reak:1,vosp:1,razum:1,har:1,volya:6},skills:Object.assign(nC().skills,{"Выдержка":3}),bracelet:{model:"Military"},cassettes:[cass("tishina","slep",{imprint:1})]});
@@ -323,4 +303,69 @@ describe('болезни v3', function(){
   });
   test('Мутный глаз: −3 к Внимательности и +3 к штрафу прицела', function(){var i=CH.cF(pc([{key:"mutny"}]));expect(i.eSk["Внимательность"]).toBe(-3);expect(i.pen.aim).toBe(3)});
   test('общего −1 за любую болезнь больше нет', function(){expect(CH.cF(pc([{key:"sibirka"}])).rollPen("telo").total).toBe(0)});
+});
+
+describe('железо v3', function(){
+  var CB=require('../data/combat');var H=require('../utils/hits');var T=require('../data/traits');var FX=require('../utils/gearFx');var O=require('../utils/gearOps');var CH=require('../utils/character');var SC=require('../utils/sceneStore');
+  function pc(o){return Object.assign(CH.nC("x"),{hpRoll:5,stats:{telo:3,reak:5,vosp:5,razum:5,har:5,volya:5}},o||{})}
+  function give(c,w){var p=O.giveSolution(c,CAT,w);if(p.error)throw new Error(p.error);return Object.assign({},c,p)}
+  afterEach(function(){SC.setScene({})});
+  test('две руки и две ноги, у каждой своя насадка', function(){
+    var c=pc({bracelet:{model:"Military"}});c=give(c,{t:"arm"});c=give(c,{t:"arm"});c=give(c,{t:"leg"});c=give(c,{t:"leg"});
+    expect(Object.keys(c.prostheses).filter(function(k){return /^(arm|leg)[LR]$/.test(k)&&c.prostheses[k]}).length).toBe(4);
+    expect(O.giveSolution(c,CAT,{t:"arm"}).error).toBeTruthy();
+    expect(T.nestInfo(c,CAT).solutions).toBe(4);expect(T.ironSteps(c,CAT)).toBe(4);
+    c=give(c,{t:"tip",key:"kleshnya"});c=give(c,{t:"tip",key:"instrument"});
+    c=Object.assign(c,O.setTip(c,CAT,"armR","kleshnya"));c=Object.assign(c,O.setTip(c,CAT,"armL","instrument"));
+    var inf=CH.cF(c);expect(inf.eSk["Ближний бой"]).toBe(2);expect(inf.eSk["Механика"]).toBe(2);
+    expect(O.setTip(c,CAT,"armL","kleshnya").error).toBeTruthy();
+    c=give(c,{t:"legtip",key:"pedal"});c=Object.assign(c,O.setTip(c,CAT,"legL","pedal"));expect(CH.cF(c).eSk["Вождение"]).toBe(2);
+  });
+  test('сломанный протез не даёт бонуса; срыв ломает ту руку, где насадка', function(){
+    var c=give(pc(),{t:"arm"});c=give(c,{t:"tip",key:"instrument"});c=Object.assign(c,O.setTip(c,CAT,"armR","instrument"));
+    var fx=FX.fumbleFx(c,CH.cF(c),"Механика",{d:-3,base:1,fumble:true});expect(fx.patch.prostheses.armR.broken).toBe(true);
+    expect(FX.fumbleFx(c,CH.cF(c),"Механика",{d:2,base:2}).patch.prostheses).toBeUndefined();
+    var rb=Object.assign({},c,O.setLimb(c,CAT,"armR",{grade:"rebuilt"}));expect(FX.fumbleFx(rb,CH.cF(rb),"Механика",{d:2,base:2}).patch.prostheses.armR.broken).toBe(true);
+    var br=Object.assign({},c,fx.patch);expect(CH.cF(br).eSk["Механика"]).toBe(0);
+  });
+  test('старая схема solutions.arm читается как правая рука', function(){
+    var c=pc({prostheses:undefined,solutions:{arm:{grade:"new",tip:"kleshnya",tips:["kist","kleshnya"]},leg:null,implants:[],addons:[]}});
+    expect(CH.cF(c).eSk["Ближний бой"]).toBe(2);
+  });
+  test('насадки-оружие: «Жнец» и кулак протеза бьют как Тело 7, «Ствол» — огнестрел', function(){
+    var c=give(pc(),{t:"arm"});expect(T.gearWeapons(c,CAT).map(function(w){return w.name})).toEqual(["Кулак протеза (правый)"]);
+    expect(c.weapons.some(function(w){return w.prosthetic})).toBe(true);
+    c=give(c,{t:"tip",key:"zhnec"});c=Object.assign(c,O.setTip(c,CAT,"armR","zhnec"));
+    expect(c.weapons.map(function(w){return w.name})).toEqual(["Клинок «Жнец»"]);expect(c.weapons[0]).toMatchObject({dmgDice:"2d6",dmgType:"Р",type:"Battle",prosthetic:true});
+    c=give(c,{t:"tip",key:"stvol"});c=Object.assign(c,O.setTip(c,CAT,"armR","stvol"));expect(c.weapons[0].type).toBe("Guns");
+    expect(require('../data/gear').PROSTHETIC_TELO).toBe(7);
+  });
+  test('«Заслон» — лёгкий щит 50%, прочность 12, руки свободны; «Молот» −2 к тонкой работе', function(){
+    var c=give(pc(),{t:"arm"});c=give(c,{t:"tip",key:"zaslon"});c=Object.assign(c,O.setTip(c,CAT,"armR","zaslon"));
+    expect(c.shields.length).toBe(1);expect(c.shields[0]).toMatchObject({type:"light",absorb:0.5,hp:12,freeHands:true});
+    c=give(c,{t:"tip",key:"molot"});c=Object.assign(c,O.setTip(c,CAT,"armR","molot"));expect(c.shields.length).toBe(0);
+    expect(CH.cF(c).eSk["Механика"]).toBe(-2);expect(c.weapons[0]).toMatchObject({dmgDice:"2d6",bonus:2,dmgType:"Д"});
+  });
+  test('две железные руки — без −2 на второй атаке', function(){
+    var c=give(give(pc(),{t:"arm"}),{t:"arm"});expect(T.twoIronArms(c)).toBe(true);
+    var b=Object.assign({},c,O.setLimb(c,CAT,"armL",{broken:true}));expect(T.twoIronArms(b)).toBe(false);
+  });
+  test('Пластина в черепе: голова ×1 и −1 к Внимательности; Шейные кольца: шея ×1', function(){
+    var c=pc();c=Object.assign(c,O.giveSolution(c,CAT,{t:"implant",key:"plastina"}));
+    expect(CH.cF(c).eSk["Внимательность"]).toBe(-1);
+    var h=H.resolvePlayerHit(c,4,"П",CB.zoneByName("Голова"),null);expect(h.mult).toBe(1);expect(h.hd).toBe(4);
+    var n=Object.assign(pc(),O.giveSolution(pc(),CAT,{t:"implant",key:"sheynye"}));expect(H.resolvePlayerHit(n,5,"П",CB.zoneByName("Шея"),null).hd).toBe(5);
+    expect(H.resolvePlayerHit(pc(),5,"П",CB.zoneByName("Шея"),null).hd).toBe(10);
+  });
+  test('Пластинки: по рукам −3; Позвоночная шина: +5 к максимуму Здоровья', function(){
+    var c=Object.assign(pc(),O.giveSolution(pc(),CAT,{t:"implant",key:"plastinki"}));expect(H.resolvePlayerHit(c,7,"П",CB.zoneByName("Руки"),null).hd).toBe(4);
+    var base=pc();var s=Object.assign(pc(),O.giveSolution(pc(),CAT,{t:"implant",key:"shina"}));
+    expect(CH.mHP(CH.cF(s).fs,s)-CH.mHP(CH.cF(base).fs,base)).toBe(5);
+  });
+  test('топь: всем −2, железной ноге без «Болотохода» ещё −2; с «Болотоходом» штрафа нет', function(){
+    SC.setScene({swamp:true});
+    expect(CH.cF(pc()).eSk["Уклонение"]).toBe(-2);
+    var l=give(pc(),{t:"leg"});expect(CH.cF(l).eSk["Атлетика"]).toBe(-4);
+    l=give(l,{t:"legtip",key:"bolotohod"});l=Object.assign(l,O.setTip(l,CAT,"legR","bolotohod"));expect(CH.cF(l).eSk["Атлетика"]).toBe(0);
+  });
 });

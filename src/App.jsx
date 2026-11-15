@@ -6,6 +6,7 @@ import { buildShopDefaults, buildMiscDefaults } from './data/shopDefaults';
 import { buildNpcDefaults } from './data/npcDefaults';
 import { setProfs } from './utils/profStore';
 import { setTraits } from './utils/traitStore';
+import { setScene } from './utils/sceneStore';
 import DonatePage from './components/gm/DonatePage';
 import GameView from './components/GameView';
 import GMPanel from './components/gm/GMPanel';
@@ -40,6 +41,7 @@ var _nh=useState({});var npcHits=_nh[0];var sNpcHits=_nh[1];
 var _shp=useState([]);var shop=_shp[0];var sShop=_shp[1];
 var _ini=useState(null);var initiative=_ini[0];var sInitiative=_ini[1];
 var _chat=useState([]);var chat=_chat[0];var sChat=_chat[1];
+var _scn=useState({});var scene=_scn[0];var sScene=_scn[1];
 var _gml=useState([]);var gmLog=_gml[0];var sGmLog=_gml[1];
 var _trt=useState(null);var traitsData=_trt[0];var sTraitsData=_trt[1];
 /* setTraits/setProfs вызываются до рендера детей: каталог эффектов нужен cF */
@@ -55,7 +57,7 @@ get(ref(db,"rooms/"+room+"/npcHits")).then(function(snap){
   Object.entries(data).forEach(function(e){if((e[1].ts||0)<cut)remove(ref(db,"rooms/"+room+"/npcHits/"+e[0]));});
 }).catch(function(){});
 var u=[];u.push(onValue(ref(db,"rooms/"+room+"/characters"),function(s){sCh(s.val()||{});sLoaded(true)}));u.push(onValue(ref(db,"rooms/"+room+"/lore"),function(s){sLo(s.val()||{})}));u.push(onValue(ref(db,"rooms/"+room+"/mapData"),function(s){sMapData(s.val()||{})}));u.push(onValue(ref(db,"rooms/"+room+"/npcTemplates"),function(s){sNpcTempl(s.val()||{})}));u.push(onValue(ref(db,"rooms/"+room+"/spawned"),function(s){sSpawned(s.val()||{})}));u.push(onValue(ref(db,"rooms/"+room+"/logs"),function(s){var d=s.val()||{};sLg(Object.values(d).sort(function(a,b){return(b.ts||0)-(a.ts||0)}).slice(0,100))}));u.push(onValue(ref(db,"rooms/"+room+"/pendingAttacks"),function(s){sPendAtk(s.val()||{})}));
-u.push(onValue(ref(db,"rooms/"+room+"/dmgEvents"),function(s){sDmgEvents(s.val()||{})}));u.push(onValue(ref(db,"rooms/"+room+"/npcHits"),function(s){sNpcHits(s.val()||{})}));u.push(onValue(ref(db,"rooms/"+room+"/shop"),function(s){sShop(s.val()||[])}));u.push(onValue(ref(db,"rooms/"+room+"/initiative"),function(s){sInitiative(s.val()||null)}));u.push(onValue(ref(db,"rooms/"+room+"/profs"),function(s){sProfsData(s.val()||null)}));u.push(onValue(ref(db,"rooms/"+room+"/chat"),function(s){var d=s.val()||{};sChat(Object.values(d).sort(function(a,b){return(a.ts||0)-(b.ts||0)}).slice(-200))}));u.push(onValue(ref(db,"rooms/"+room+"/traits"),function(s){sTraitsData(s.val()||null)}));u.push(onValue(ref(db,"rooms/"+room+"/gmLog"),function(s){var d=s.val()||{};sGmLog(Object.values(d).sort(function(a,b){return(b.ts||0)-(a.ts||0)}).slice(0,200))}));return function(){u.forEach(function(x){x()})}},[room]);
+u.push(onValue(ref(db,"rooms/"+room+"/dmgEvents"),function(s){sDmgEvents(s.val()||{})}));u.push(onValue(ref(db,"rooms/"+room+"/npcHits"),function(s){sNpcHits(s.val()||{})}));u.push(onValue(ref(db,"rooms/"+room+"/shop"),function(s){sShop(s.val()||[])}));u.push(onValue(ref(db,"rooms/"+room+"/initiative"),function(s){sInitiative(s.val()||null)}));u.push(onValue(ref(db,"rooms/"+room+"/profs"),function(s){sProfsData(s.val()||null)}));u.push(onValue(ref(db,"rooms/"+room+"/chat"),function(s){var d=s.val()||{};sChat(Object.values(d).sort(function(a,b){return(a.ts||0)-(b.ts||0)}).slice(-200))}));u.push(onValue(ref(db,"rooms/"+room+"/traits"),function(s){sTraitsData(s.val()||null)}));u.push(onValue(ref(db,"rooms/"+room+"/scene"),function(s){sScene(s.val()||{})}));u.push(onValue(ref(db,"rooms/"+room+"/gmLog"),function(s){var d=s.val()||{};sGmLog(Object.values(d).sort(function(a,b){return(b.ts||0)-(a.ts||0)}).slice(0,200))}));return function(){u.forEach(function(x){x()})}},[room]);
 /* Новый мир: при первом входе мастера кладём стартовый каталог и бестиарий */
 useEffect(function(){if(!room||!isGM)return;
 get(ref(db,"rooms/"+room+"/seeded")).then(function(snap){
@@ -103,6 +105,8 @@ function saveNpcHit(ev){if(!room)return;var id=Date.now()+"_"+Math.floor(Math.ra
 function clearNpcHit(id){if(!room)return;remove(ref(db,"rooms/"+room+"/npcHits/"+id))}
 function saveShop(d){if(!room)return;set(ref(db,"rooms/"+room+"/shop"),d);sShop(d)}
 function saveInitiative(d){if(!room)return;set(ref(db,"rooms/"+room+"/initiative"),d);sInitiative(d)}
+/* Флаги сцены (топь, бездорожье, на ходу) — ставит мастер */
+function saveScene(d){if(!room)return;set(ref(db,"rooms/"+room+"/scene"),d);sScene(d)}
 function saveTraits(d){if(!room)return;set(ref(db,"rooms/"+room+"/traits"),d);sTraitsData(d)}
 function changeAccount(currentPassword,newLogin,newPassword){
   return authChangeAccount(room,auth.login,currentPassword,newLogin,newPassword).then(function(res){
@@ -121,7 +125,7 @@ function leave(){
 var _sd=useState(false);var showDonate=_sd[0];var sShowDonate=_sd[1];var _sb2=useState(false);var showBestApp=_sb2[0];var sShowBestApp=_sb2[1];
 if(!auth)return <Login onAuth={handleAuth}/>;
 var ca=Object.entries(chars).map(function(e){return Object.assign({},e[1],{_fbId:e[0]})});
-setProfs(profsData);setTraits(traitsData);
+setProfs(profsData);setTraits(traitsData);setScene(scene);
 return(<div className="zc-app"><style>{CSS}</style>
 {showDonate&&<DonatePage onClose={function(){sShowDonate(false)}} isGM={isGM} saveMap={saveMap} mapData={mapData}/>}
 {isGM&&<NpcHitPopup events={npcHits} onClear={clearNpcHit}/>}
@@ -133,6 +137,6 @@ return(<div className="zc-app"><style>{CSS}</style>
 <button onClick={leave} className="chip">Выйти</button>
 </div>
 </div>
-{isGM?<GMPanel characters={ca} saveChar={saveChar} deleteChar={deleteChar} lore={lore} saveLore={saveLore} logs={logs} addLog={addLog} clearLogs={clearLogs} chat={chat} sendChat={sendChat} clearChat={clearChat} myName={auth.login} mapData={mapData} saveMap={saveMap} npcTempl={npcTempl} saveNpcTempl={saveNpcTempl} spawned={spawned} saveSpawned={saveSpawned} roomCode={room} pendAtk={pendAtk} savePendingAttack={savePendingAttack} clearPendingAttack={clearPendingAttack} showBest={showBestApp} setShowBest={sShowBestApp} saveNpcHit={saveNpcHit} shop={shop} saveShop={saveShop} initiative={initiative} saveInitiative={saveInitiative} profs={profsData} saveProfs={saveProfs} traits={traitsData} saveTraits={saveTraits} gmLog={gmLog} addGmLog={addGmLog} clearGmLog={clearGmLog}/>:(function(){var my=ca.find(function(c){return c._fbId===pId});if(!my)return <div style={{padding:20,textAlign:"center",color:"#cfc6b2"}}>Подключение…</div>;return <GameView char={my} save={function(d){saveChar(pId,d)}} isGM={false} logs={logs} addLog={addLog} chat={chat} sendChat={sendChat} lore={lore} mapData={mapData} saveMap={saveMap} characters={ca} spawned={spawned} saveSpawned={saveSpawned} pendAtk={pendAtk} clearPendingAttack={clearPendingAttack} savePendingAttack={savePendingAttack} room={room} dmgEvents={dmgEvents} clearDmgEvent={clearDmgEvent} saveNpcHit={saveNpcHit} shop={shop} initiative={initiative} saveInitiative={saveInitiative} changeAccount={changeAccount} traits={traitsData} addGmLog={addGmLog}/>})()}
+{isGM?<GMPanel characters={ca} saveChar={saveChar} deleteChar={deleteChar} lore={lore} saveLore={saveLore} logs={logs} addLog={addLog} clearLogs={clearLogs} chat={chat} sendChat={sendChat} clearChat={clearChat} myName={auth.login} mapData={mapData} saveMap={saveMap} npcTempl={npcTempl} saveNpcTempl={saveNpcTempl} spawned={spawned} saveSpawned={saveSpawned} roomCode={room} pendAtk={pendAtk} savePendingAttack={savePendingAttack} clearPendingAttack={clearPendingAttack} showBest={showBestApp} setShowBest={sShowBestApp} saveNpcHit={saveNpcHit} shop={shop} saveShop={saveShop} initiative={initiative} saveInitiative={saveInitiative} profs={profsData} saveProfs={saveProfs} traits={traitsData} saveTraits={saveTraits} scene={scene} saveScene={saveScene} gmLog={gmLog} addGmLog={addGmLog} clearGmLog={clearGmLog}/>:(function(){var my=ca.find(function(c){return c._fbId===pId});if(!my)return <div style={{padding:20,textAlign:"center",color:"#cfc6b2"}}>Подключение…</div>;return <GameView char={my} save={function(d){saveChar(pId,d)}} isGM={false} logs={logs} addLog={addLog} chat={chat} sendChat={sendChat} lore={lore} mapData={mapData} saveMap={saveMap} characters={ca} spawned={spawned} saveSpawned={saveSpawned} pendAtk={pendAtk} clearPendingAttack={clearPendingAttack} savePendingAttack={savePendingAttack} room={room} dmgEvents={dmgEvents} clearDmgEvent={clearDmgEvent} saveNpcHit={saveNpcHit} shop={shop} initiative={initiative} saveInitiative={saveInitiative} changeAccount={changeAccount} traits={traitsData} addGmLog={addGmLog}/>})()}
 </div>)}
 

@@ -185,7 +185,7 @@ function PendingAttackPopup(pr){
               var shObj=shieldId?(myChar.shields||[]).find(function(s){return s.id===shieldId}):null;
               var equippedW=(myChar.weapons||[]).find(function(w){return w.id===myChar.equippedWeapon});
               var is2h=equippedW&&(equippedW.hands===2||(equippedW.hands===1.5&&(myChar.weaponMode||"1h")==="2h"));
-              var canShield=shObj&&shObj.hp>0&&!is2h;
+              var canShield=shObj&&shObj.hp>0&&(!is2h||shObj.freeHands);
               return(<div style={{marginTop:8,display:"flex",flexDirection:"column",gap:6}}>
                 {canShield&&<button onClick={function(){update(ref(db,"rooms/"+pr.room+"/pendingAttacks/"+id),{status:"pending_dmg",shieldUsed:true,shieldAbsorb:shObj.absorb,shieldName:shObj.name,shieldId:shObj.id});}} style={{width:"100%",padding:10,borderRadius:0,border:"none",background:"#4f5b2a",color:"#fff",fontFamily:"var(--f-body)",fontWeight:700,fontSize:13,cursor:"pointer"}}>Выставить {shObj.name} ({shObj.absorb*100}% поглощения)</button>}
                 {canShield&&<div style={{fontSize:11,color:"#6a6052",textAlign:"center"}}>HP щита: {shObj.hp}/{shObj.maxHp}</div>}

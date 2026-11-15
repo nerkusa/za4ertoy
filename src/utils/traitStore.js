@@ -6,6 +6,7 @@ import { GEAR_DEFAULTS } from '../data/gear';
 let _gear = null;
 export function setTraits(t) {
   _gear = (t && typeof t === 'object' && !Array.isArray(t) && (t.cassettes || t.tips || t.implants)) ? {
+    legTips: Array.isArray(t.legTips) ? t.legTips : GEAR_DEFAULTS.legTips,
     cassettes: Array.isArray(t.cassettes) ? t.cassettes : GEAR_DEFAULTS.cassettes,
     tips: Array.isArray(t.tips) ? t.tips : GEAR_DEFAULTS.tips,
     implants: Array.isArray(t.implants) ? t.implants : GEAR_DEFAULTS.implants,

@@ -51,16 +51,35 @@ var IMPRINT_STAGES=["—","Привычки","Память","Желания","П
 /* ── Солюшны ── */
 var ARM_PRICE=500,LEG_PRICE=300,HVATKA_PRICE=30;
 var FINE_SKILLS=["Механика","Медицина","Воровство"];
+/* Насадки на руку (глава 10). weapon — насадка-оружие (prosthetic: бьёт
+   как с Телом 7), shield — наручный щит, finePen — штраф к тонкой работе,
+   noFine — тонкая работа невозможна. */
 var TIPS=[
-  {key:"kist",name:"Кисть",effects:[],text:""},
-  {key:"instrument",name:"Инструмент",effects:[sk("Механика",2)],text:""},
-  {key:"kleshnya",name:"Клешня",effects:[sk("Ближний бой",2)],text:"Тонкая работа невозможна.",noFine:true},
-  {key:"kryuk",name:"Крюк",effects:[sk("Атлетика",1)],text:""},
-  {key:"hirurg_kist",name:"Хирургическая кисть",effects:[sk("Медицина",2)],text:""},
-  {key:"rezak",name:"Резак",effects:[],text:"Режет металл, цепи, замки."},
-  {key:"stvol",name:"Ствол",effects:[],text:"Однозарядный ствол в протезе.",weapon:{name:"Насадка «Ствол»",type:"Guns",dmgType:"П",dmgDice:"3d6",bonus:0,hands:1,clip:1},price:120},
-  {key:"shchup",name:"Щуп",effects:[],text:"Достаёт туда, куда рука не пролезет."}
+  {key:"kist",name:"Кисть",effects:[],text:"Как своя. Идёт в комплекте с рукой.",price:150},
+  {key:"kleshnya",name:"Клешня",effects:[sk("Ближний бой",2)],text:"Держит как тиски; тонкая работа невозможна.",noFine:true,price:80},
+  {key:"instrument",name:"Инструмент",effects:[sk("Механика",2)],text:"Ключи, отвёртка, паяльник.",price:120},
+  {key:"kryuk",name:"Крюк",effects:[sk("Атлетика",1)],text:"Лазать, цеплять, драться.",price:40},
+  {key:"hirurg_kist",name:"Хирургическая кисть",effects:[sk("Медицина",2)],text:"Тонкая работа.",price:350},
+  {key:"rezak",name:"Резак",effects:[],text:"Пилит металл и цепи.",price:150},
+  {key:"stvol",name:"Ствол",effects:[],text:"Однозарядный обрез в предплечье, 3d6.",weapon:{name:"Насадка «Ствол»",type:"Guns",dmgType:"П",dmgDice:"3d6",bonus:0,hands:1,clip:1},price:120},
+  {key:"shchup",name:"Щуп",effects:[],text:"Щёлкалка в пальце: грязь слышно без дозиметра.",price:60},
+  {key:"zhnec",name:"Клинок «Жнец»",effects:[],text:"Выдвижной клинок, 2d6 Р. Из руки не выбить.",weapon:{name:"Клинок «Жнец»",type:"Battle",dmgType:"Р",dmgDice:"2d6",bonus:0,hands:1,prosthetic:true,noDisarm:true},price:200},
+  {key:"molot",name:"«Молот»",effects:[],text:"Стальной набалдашник, 2d6+2 Д. Тонкая работа −2.",weapon:{name:"«Молот»",type:"Battle",dmgType:"Д",dmgDice:"2d6",bonus:2,hands:1,prosthetic:true},finePen:2,price:180},
+  {key:"zaslon",name:"«Заслон»",effects:[],text:"Наручный лёгкий щит, принимает половину урона. Руки свободны.",shield:{name:"«Заслон»",type:"light",absorb:0.5,hp:12,freeHands:true},price:160},
+  {key:"koshka",name:"Кошка",effects:[sk("Атлетика",3)],text:"Трос с крюком на 5 м: +3 к Атлетике при лазании. Подтянуть врага: Тело против Тела.",price:90}
 ];
+/* Насадки на ногу (замок на «Опоре») */
+var LEG_TIPS=[
+  {key:"stopa",name:"Стопа",effects:[],text:"Обычная, идёт в комплекте с «Опорой».",price:null},
+  {key:"bolotohod",name:"«Болотоход»",effects:[],text:"Широкая стопа: топь не даёт штрафов, не вязнешь.",swamp:true,price:80},
+  {key:"prygun",name:"«Прыгун»",effects:[sk("Атлетика",2)],text:"Пружина: прыжок на 4 м, запрыгнуть на кузов на ходу.",price:150},
+  {key:"kopyto",name:"«Копыто»",effects:[],text:"Пинок 2d6 Д. Кто получил — Атлетика СЛ 12, или падает.",weapon:{name:"«Копыто»",type:"Brawl",dmgType:"Д",dmgDice:"2d6",bonus:0,hands:1,note:"цель: Атлетика СЛ 12 или падает"},price:120},
+  {key:"roliki",name:"Ролики",effects:[],text:"По асфальту вдвое быстрее. На бездорожье −2 к Уклонению.",offroadPen:2,price:100},
+  {key:"pedal",name:"«Педаль»",effects:[sk("Вождение",2)],text:"Ступня срастается с педалью машины.",price:70}
+];
+/* Удар железным кулаком: появляется у каждой рабочей руки (не «Хватка») */
+var IRON_FIST={name:"Кулак протеза",type:"Brawl",dmgType:"Д",dmgDice:"1d4",bonus:0,hands:1,prosthetic:true};
+var PROSTHETIC_TELO=7;
 function im(key,name,price,effects,text){return{key:key,name:name,kind:"implant",price:price,nest:1,steps:1,effects:effects||[],text:text||""}}
 function ad(key,name,price,effects,text,extra){return Object.assign({key:key,name:name,kind:"addon",price:price,nest:0,steps:0,effects:effects||[],text:text||""},extra||{})}
 function fu(key,name,steps,effects,text,extra){return Object.assign({key:key,name:name,kind:"full",price:null,nest:steps,steps:steps,effects:effects||[],text:text||"",gmOnly:true},extra||{})}
@@ -74,20 +93,21 @@ var IMPLANTS=[
   im("sito","Печень «Сито»",350,[],"Держит отраву и спирт."),
   im("klapan","Клапан",300,[],""),
   im("nasos","Насос",600,[],"Раз за бой — ещё один ход после падения."),
-  im("shina","Позвоночная шина",400,[],""),
+  im("shina","Позвоночная шина",400,[{type:"max_hp",amount:5}],"+5 к максимальному Здоровью, с ног не сбить, носишь вдвое больше."),
   im("pruzhina","Колени «Пружина»",450,[],""),
-  im("plastina","Пластина в черепе",150,[],""),
+  im("plastina","Пластина в черепе",150,[{type:"zone_mult_override",zone:"head",mult:1},sk("Внимательность",-1)],"Попадание в голову ×1 вместо ×3. −1 к Внимательности, мигрени к дождю."),
+  im("sheynye","Шейные кольца",350,[{type:"zone_mult_override",zone:"neck",mult:1},sk("Внимательность",-1)],"Попадание в шею ×1 вместо ×2. Голову быстро не повернуть."),
   ad("shchelkalka","Щёлкалка в запястье",60,[],""),
   ad("depo","Депо",70,[],"Раз за бой: до конца боя штраф от ран не действует.",{depo:true}),
   ad("kompas","Компас в кости",30,[],"+1 Выживание при поиске дороги."),
-  ad("plastinki","Пластинки на предплечьях",50,[],""),
+  ad("plastinki","Пластинки на предплечьях",50,[{type:"zone_dmg_reduce",zone:"arms",amount:3}],"Попадание в руки: −3 урона."),
   ad("skoby","Скобы на костяшках",20,[],"Рукопашное оружие.",{weapon:{name:"Скобы на костяшках",type:"Brawl",dmgType:"Д",dmgDice:"1d4",bonus:1,hands:1}}),
   ad("fonar","Фонарь в ладони",40,[],""),
   ad("zaglushki","Ушные заглушки",30,[],""),
   ad("taynik","Тайник под кожей",25,[],""),
-  fu("tiski","Руки «Тиски»",2,[],"+2 Тело для силы и хватки."),
-  fu("hodok","Ноги «Ходок»",2,[],""),
-  fu("karkas","Каркас",3,[st("telo",2)],""),
+  fu("tiski","Руки «Тиски»",2,[],"+2 к Телу во всём, где нужны сила и хватка. Насадки те же.",{price:1200}),
+  fu("hodok","Ноги «Ходок»",2,[],"Бег без усталости, +2 к защите от сбивания с ног.",{price:1200}),
+  fu("karkas","Каркас",3,[st("telo",2)],"+2 к Телу во всём, рёбра не ломаются. Весишь как двое.",{price:2000}),
   fu("korpus","Корпус",0,[{type:"stat_set",stat:"telo",value:10}],"Занимает все гнёзда. Кассеты невозможны.",{allNests:true,steps:3})
 ];
 var IRON_STAGES=[
@@ -124,6 +144,6 @@ function diseaseList(c){return ((c&&c.diseases)||[]).map(function(x){var key=typ
 function diseaseFlag(c,flag){return diseaseList(c).some(function(d){return !!d.flags[flag]})}
 function doseState(d){d=d||0;if(d>=10)return"Край";if(d>=7)return"Горячка пятна";if(d>=4)return"Мутит";return""}
 
-var GEAR_DEFAULTS={cassettes:CASSETTES,tips:TIPS,implants:IMPLANTS};
+var GEAR_DEFAULTS={cassettes:CASSETTES,tips:TIPS,legTips:LEG_TIPS,implants:IMPLANTS};
 
-export { BRACELETS, CASS_CLASSES, CASS_KINDS, kindName, CASSETTES, NOISE, IMPRINT_STAGES, ARM_PRICE, LEG_PRICE, HVATKA_PRICE, FINE_SKILLS, TIPS, IMPLANTS, IRON_STAGES, UPKEEP, DISEASES, FINE_WORK, diseaseByKey, diseaseList, diseaseFlag, doseState, GEAR_DEFAULTS };
+export { BRACELETS, CASS_CLASSES, CASS_KINDS, kindName, CASSETTES, NOISE, IMPRINT_STAGES, ARM_PRICE, LEG_PRICE, HVATKA_PRICE, FINE_SKILLS, TIPS, LEG_TIPS, IRON_FIST, PROSTHETIC_TELO, IMPLANTS, IRON_STAGES, UPKEEP, DISEASES, FINE_WORK, diseaseByKey, diseaseList, diseaseFlag, doseState, GEAR_DEFAULTS };

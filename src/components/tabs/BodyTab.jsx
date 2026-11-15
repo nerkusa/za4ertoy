@@ -4,9 +4,10 @@ import { getTraits } from '../../utils/traitStore';
 import { getProfs } from '../../utils/profStore';
 import { ORIGINS, originOf } from '../../data/professions';
 import { IRON_STAGES, UPKEEP, DISEASES, doseState, diseaseList, diseaseByKey } from '../../data/gear';
-import { findBy, solutionList, ironSteps, upkeepCount } from '../../data/traits';
+import { findBy, solutionList, ironSteps, upkeepCount, LIMB_KEYS, LIMB_NAME, isArm, ironArms, ironLegs } from '../../data/traits';
 import { inCombat } from '../../utils/gearFx';
-import { patchFromShopItem, removeSolution, setTip, setTipBroken } from '../../utils/gearOps';
+import { patchFromShopItem, removeSolution, setTip, setLimb, tipFree, giveSolution } from '../../utils/gearOps';
+import { prosthesesOf } from '../../utils/crits';
 import { tryPay, fmtMoney } from '../../utils/currency';
 import { rollHit } from '../../utils/dice';
 import ShopPicker from '../ShopPicker';
@@ -47,14 +48,43 @@ var c=pr.char;var sv=pr.save;var gm=!!pr.isGM;var cat=getTraits();var inf=cF(c);
 var canEditId=gm||!c.locked;
 var fighting=inCombat(pr.initiative,c._fbId)&&!gm;
 var org=originOf(c.origin);var profs=getProfs();var pf=profs.find(function(p){return p.id===c.profession})||profs[0];
-var s=c.solutions||{};var arm=s.arm;var steps=ironSteps(c,cat);var upk=upkeepCount(c,cat)*UPKEEP;
+var s=c.solutions||{};var pros=prosthesesOf(c);var steps=ironSteps(c,cat);var upk=upkeepCount(c,cat)*UPKEEP;
 var dose=c.dose||0;var dis=diseaseList(c);
 var _d=useState(DISEASES[0].key);var newDis=_d[0];var sNewDis=_d[1];
 var who=c.name||"???";
 function log(e){if(pr.addLog)pr.addLog(Object.assign({who:who,total:0,detail:""},e))}
 function apply(p,label){if(p.error){alert(p.error);return false}sv(Object.assign({},c,p));if(label)log({type:"gear",label:label});return true}
 function buy(it){var pay=tryPay(c,it.price);if(pay===null)return;var p=patchFromShopItem(c,cat,it,Math.floor((fs.telo||0)/2));if(p.error){alert(p.error);return}sv(Object.assign({},c,pay,p));log({type:"gear",label:"Купил: "+it.name})}
-function changeTip(k){if(fighting){alert("В бою насадки не меняют");return}var t=findBy(cat.tips,k);apply(setTip(c,cat,k),"Сменил насадку: "+(t?t.name:k))}
+function changeTip(limbKey,k){if(fighting){alert("В бою насадки не меняют");return}var t=findBy(isArm(limbKey)?cat.tips:cat.legTips,k);apply(setTip(c,cat,limbKey,k),LIMB_NAME[limbKey]+": насадка «"+(t?t.name:k)+"»")}
+/* Ремонт протеза: Механика СЛ 14 (крит или износ насадки) */
+function repair(limbKey){
+  var R=rollHit();var pen=inf.rollPen("razum");var mech=inf.eSk["Механика"]||0;var t=R.d+(fs.razum||0)+mech+pen.total;var ok=t>=14;
+  if(ok)apply(setLimb(c,cat,limbKey,{broken:false}));
+  log({type:"skill",label:"Ремонт протеза ("+LIMB_NAME[limbKey].toLowerCase()+") — "+(ok?"починен":"не вышло"),detail:"d10("+R.d+") + Разум("+(fs.razum||0)+") + Механика("+mech+")"+(pen.total?" + штраф("+pen.total+")":"")+" = "+t+" против СЛ 14",total:t});
+  if(pr.onRoll)pr.onRoll({label:"Ремонт протеза · СЛ 14",d10:R.d,crit:R.crit,fumble:R.fumble,parts:[{label:"Разум",value:fs.razum||0},{label:"Механика",value:mech}].concat(pen.parts),total:t,subtext:ok?"Протез работает":"Не вышло. После крита нужны ещё детали на половину цены — решает мастер"});
+}
+/* Карточка конечности: протез, насадка, поломка */
+function LimbCard(lp){
+  var k=lp.limbKey;var l=pros[k];var arm=isArm(k);
+  var p2=Object.assign({},pros,{armTips:(c.prostheses&&c.prostheses.armTips)||[],legTips:(c.prostheses&&c.prostheses.legTips)||[]});
+  if(!l)return gm?<div className="card" style={{opacity:.75}}><div className="ch"><b>{LIMB_NAME[k]}</b><span>своя</span></div><div className="cb"><div className="row">
+    {arm?<React.Fragment><button className="btn sm" onClick={function(){apply(giveSolution(c,cat,{t:"arm",grade:"new",limb:k}),LIMB_NAME[k]+": протез руки")}}>Протез</button><button className="btn sm" onClick={function(){apply(giveSolution(c,cat,{t:"hvatka",limb:k}),LIMB_NAME[k]+": «Хватка»")}}>«Хватка»</button></React.Fragment>
+       :<button className="btn sm" onClick={function(){apply(giveSolution(c,cat,{t:"leg",grade:"new",limb:k}),LIMB_NAME[k]+": нога «Опора»")}}>«Опора»</button>}
+  </div></div></div>:null;
+  if(l.grade==="hvatka")return <div className="card"><div className="ch"><b>{LIMB_NAME[k]+": «Хватка»"}</b><span>без гнезда</span></div><div className="cb"><p>Держит ведро, руль, приклад. −2 к тонкой работе; одной «Хваткой» не зарядишь оружие.</p>{gm&&<div><button className="btn sm" onClick={function(){apply(removeSolution(c,cat,{limb:k}))}}>Снять</button></div>}</div></div>;
+  var list=(arm?cat.tips:cat.legTips)||[];var base=arm?"kist":"stopa";
+  var avail=list.filter(function(t){return t.key===base||t.key===l.tip||tipFree(p2,k,t.key)>0});
+  var t=findBy(list,l.tip);
+  var eff=t?(t.effects||[]).map(function(e){return (e.amount>0?"+":"")+e.amount+" "+(e.skill||e.stat)}).join(", "):"";
+  return <div className="card"><div className="ch"><b>{LIMB_NAME[k]+": "+(arm?"протез":"«Опора»")}</b><span>{(l.grade==="rebuilt"?"перебранный":"заводской")+" · гнездо"}</span></div><div className="cb">
+    <div className="n-field"><label>Насадка в замке</label><select className="n-input" disabled={fighting} value={l.tip||base} onChange={function(e){changeTip(k,e.target.value)}}>{avail.map(function(x){return <option key={x.key} value={x.key}>{x.name}</option>})}</select></div>
+    {t&&<p>{[eff,t.text,t.weapon?"оружие: "+t.weapon.dmgDice+(t.weapon.bonus?"+"+t.weapon.bonus:"")+" "+t.weapon.dmgType:null].filter(Boolean).join(" · ")||"без эффекта"}</p>}
+    {l.broken&&<div className="warnbox">Протез сломан — бонусов и оружия нет до ремонта (Механика СЛ 14).</div>}
+    {l.broken&&<div><button className="btn sm" onClick={function(){repair(k)}}>Ремонт · Механика СЛ 14</button></div>}
+    {l.grade==="rebuilt"&&<p className="hint">Перебранный: ломается на 1 и на 2 на кубе.</p>}
+    {gm&&<div className="row"><button className="btn sm" onClick={function(){apply(setLimb(c,cat,k,{broken:!l.broken}),LIMB_NAME[k]+(l.broken?": починен":": сломан"))}}>{l.broken?"Починен":"Сломать"}</button><button className="btn sm" onClick={function(){apply(setLimb(c,cat,k,{grade:l.grade==="rebuilt"?"new":"rebuilt"}))}}>{l.grade==="rebuilt"?"Сделать заводским":"Сделать перебранным"}</button><button className="btn sm" onClick={function(){if(window.confirm("Снять протез?"))apply(removeSolution(c,cat,{limb:k}))}}>Снять</button></div>}
+  </div></div>;
+}
 function payWeek(){if(upk<=0)return;var pay=tryPay(c,upk);if(pay===null)return;sv(Object.assign({},c,pay));log({type:"gear",label:"Оплатил уход за железом: "+fmtMoney(upk)})}
 function foodCheck(){
   var R=rollHit();var pen=inf.rollPen("vosp");var t=R.d+(fs.vosp||0)+(inf.eSk["Выживание"]||0)+pen.total;var ok=t>=12;
@@ -97,23 +127,21 @@ return(<div style={{display:"flex",flexDirection:"column",gap:12}}>
   {fighting&&<div className="warnbox">Идёт бой — насадки менять нельзя.</div>}
   {list.length===0&&<p className="hint">Железа нет.</p>}
   <div className="cards">
-  {arm&&arm.grade!=="hvatka"&&<div className="card"><div className="ch"><b>Протез руки</b><span>{(arm.grade==="rebuilt"?"перебранный":"новый")+" · гнездо"}</span></div><div className="cb">
-    <div className="n-field"><label>Насадка в замке</label><select className="n-input" disabled={fighting} value={arm.tip||""} onChange={function(e){changeTip(e.target.value)}}>{(arm.tips||["kist"]).map(function(k){var t=findBy(cat.tips,k);return <option key={k} value={k}>{t?t.name:k}</option>})}</select></div>
-    {(function(){var t=findBy(cat.tips,arm.tip);if(!t)return null;var eff=(t.effects||[]).map(function(e){return (e.amount>0?"+":"")+e.amount+" "+(e.skill||e.stat)}).join(", ");return <p>{[eff,t.text,t.weapon?"оружие: "+t.weapon.dmgDice+" "+t.weapon.dmgType:null].filter(Boolean).join(" · ")||"без эффекта"}</p>})()}
-    {arm.broken&&<div className="warnbox">Насадка сломана — бонуса нет, пока не починят.</div>}
-    {arm.grade==="rebuilt"&&<p className="hint">Перебранный: насадка ломается не только на срыве, но и на базовой 2.</p>}
-    <p className="hint">Срыв на броске, где сработал бонус насадки, ломает её. Менять — только вне боя.</p>
-    {gm&&<div className="row"><button className="btn sm" onClick={function(){apply(setTipBroken(c,cat,!arm.broken),arm.broken?"Насадка починена":"Насадка сломана")}}>{arm.broken?"Починена":"Сломать"}</button><button className="btn sm" onClick={function(){var g=arm.grade==="rebuilt"?"new":"rebuilt";sv(Object.assign({},c,{solutions:Object.assign({},s,{arm:Object.assign({},arm,{grade:g})})}))}}>{arm.grade==="rebuilt"?"Сделать новым":"Сделать перебранным"}</button><button className="btn sm" onClick={function(){if(window.confirm("Снять протез руки?"))apply(removeSolution(c,cat,{t:"arm"}))}}>Снять</button></div>}
-  </div></div>}
-  {arm&&arm.grade==="hvatka"&&<div className="card"><div className="ch"><b>«Хватка»</b><span>временный · без гнезда</span></div><div className="cb"><p>−2 к тонкой работе: Механика, Медицина, Воровство.</p>{gm&&<div><button className="btn sm" onClick={function(){apply(removeSolution(c,cat,{t:"arm"}))}}>Снять</button></div>}</div></div>}
-  {s.leg&&<div className="card"><div className="ch"><b>Нога «Опора»</b><span>гнездо</span></div><div className="cb"><p>Протез ноги.</p>{gm&&<div><button className="btn sm" onClick={function(){apply(removeSolution(c,cat,{t:"leg"}))}}>Снять</button></div>}</div></div>}
+  {LIMB_KEYS.map(function(k){return <LimbCard key={k} limbKey={k}/>})}
   {list.filter(function(x){return x.def}).map(function(x){var d=x.def;var eff=(d.effects||[]).map(function(e){return e.type==="stat_set"?"Тело "+e.value:((e.amount>0?"+":"")+e.amount+" "+(e.skill||e.stat))}).join(", ");
     return <div key={x.key} className="card"><div className="ch"><b>{d.name}</b><span>{d.kind==="addon"?"накладное":d.kind==="full"?"полная замена · "+d.steps+" шага":"вживляемое · гнездо"}</span></div><div className="cb"><p>{[eff,d.text].filter(Boolean).join(" · ")||"—"}</p>
     {d.depo&&<p className="hint">{"Заряд: "+(c.depoCharge!=null?c.depoCharge:1)+". Кнопка — во вкладке «Бой»."}{gm&&<button className="btn sm" style={{marginLeft:8}} onClick={function(){sv(Object.assign({},c,{depoCharge:1,combatDepoUsed:false}))}}>Перезарядить</button>}</p>}
     {gm&&<div><button className="btn sm" onClick={function(){apply(removeSolution(c,cat,{t:"implant",key:x.key}))}}>Снять</button></div>}</div></div>})}
   </div>
+  {(function(){var at=(c.prostheses&&c.prostheses.armTips)||[];var lt=(c.prostheses&&c.prostheses.legTips)||[];if(!at.length&&!lt.length)return null;
+    function nm(list,k){var x=findBy(list,k);return x?x.name:k}
+    return <p className="hint">{"Насадки в запасе: "+at.map(function(k){return nm(cat.tips,k)}).concat(lt.map(function(k){return nm(cat.legTips||[],k)})).join(", ")+". Сменить — минута, только вне боя."}</p>})()}
+  {ironArms(c).length>=2&&<p className="hint">Две железные руки: двумя насадками за ход без штрафа −2. Удар протезом — как с Телом 7.</p>}
+  {ironArms(c).length===1&&<p className="hint">Удар протезом — как с Телом 7.</p>}
+  {ironLegs(c).length>=2&&<p className="hint">Две железные ноги: +2 к Атлетике в погоне пешком.</p>}
+  {ironLegs(c).length>0&&<p className="hint">Железная нога в топи: ещё −2 к Уклонению и Атлетике, если на ней не «Болотоход».</p>}
   {(s.addons||[]).length>Math.floor((fs.telo||0)/2)&&<div className="warnbox">{"Накладного больше, чем Тело/2 ("+Math.floor((fs.telo||0)/2)+")."}</div>}
-  {!gm&&<ShopPicker color="#4f5b2a" label="Купить солюшн" items={solShop} subOf={function(it){return it.sol==="implant"?(it.kind2||"implant"):it.sol}} suborder={["arm","hvatka","leg","tip","implant","addon"]} sublabels={{arm:"Протез руки",hvatka:"Временный протез",leg:"Протез ноги",tip:"Насадки",implant:"Вживляемое",addon:"Накладное"}} sub={function(it){return it.desc||""}} onPick={buy}/>}
+  {!gm&&<ShopPicker color="#4f5b2a" label="Купить солюшн" items={solShop} subOf={function(it){return it.sol==="implant"?(it.kind2||"implant"):it.sol}} suborder={["arm","hvatka","leg","tip","legtip","implant","addon"]} sublabels={{arm:"Протез руки",hvatka:"Временный протез",leg:"Протез ноги",tip:"Насадки на руку",legtip:"Насадки на ногу",implant:"Вживляемое",addon:"Накладное"}} sub={function(it){return it.desc||""}} onPick={buy}/>}
 </div>
 
 <div className="sec rust">

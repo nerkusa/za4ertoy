@@ -57,10 +57,10 @@ function critOutcome(t,zoneName,hd,rnd,isNpc){
 function critPatch(t,out){
   if(!out)return{};
   if(out.kind==="prosthesis"){
-    var p=prosthesesOf(t);var limb=Object.assign({},p[out.limbKey],{broken:true});p[out.limbKey]=limb;
+    var p=prosthesesOf(t);p[out.limbKey]=Object.assign({},p[out.limbKey],{broken:true});
     var patch={prostheses:p};
-    /* старая схема хранила руку в solutions.arm — держим её в согласии */
-    if(t.solutions&&t.solutions.arm&&out.limbKey==="armR")patch.solutions=Object.assign({},t.solutions,{arm:Object.assign({},t.solutions.arm,{broken:true})});
+    /* старая схема (solutions.arm/leg) переезжает в prostheses */
+    if(t.solutions&&(t.solutions.arm||t.solutions.leg))patch.solutions=Object.assign({},t.solutions,{arm:null,leg:null});
     return patch;
   }
   var stt=Object.assign({id:newId(),ts:Date.now()},out.status);

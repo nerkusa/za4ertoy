@@ -21,7 +21,7 @@ const CATS = [
   { id: 'cassette', name: 'Кассеты', color: '#211d18' },
   { id: 'solution', name: 'Солюшны', color: '#6b2f4a' },
 ];
-const SOL_KINDS = [{ id: 'bracelet', name: 'Браслет' }, { id: 'arm', name: 'Протез руки' }, { id: 'hvatka', name: '«Хватка»' }, { id: 'leg', name: 'Нога «Опора»' }, { id: 'tip', name: 'Насадка' }, { id: 'implant', name: 'Вживляемое / накладное' }];
+const SOL_KINDS = [{ id: 'bracelet', name: 'Браслет' }, { id: 'arm', name: 'Протез руки' }, { id: 'hvatka', name: '«Хватка»' }, { id: 'leg', name: 'Нога «Опора»' }, { id: 'tip', name: 'Насадка на руку' }, { id: 'legtip', name: 'Насадка на ногу' }, { id: 'implant', name: 'Вживляемое / накладное' }];
 
 const PROJ_TYPES = ['Пуля', 'Болт', 'Стрела'];
 
@@ -192,7 +192,7 @@ export default function ShopEditor(pr) {
     }
     if (it.cat === 'solution') {
       const g = getTraits();
-      const opts = it.sol === 'bracelet' ? Object.keys(BRACELETS).map(function (m) { return { key: m, name: m }; }) : it.sol === 'tip' ? g.tips : it.sol === 'implant' ? g.implants : it.sol === 'arm' ? [{ key: 'new', name: 'новый' }, { key: 'rebuilt', name: 'перебранный' }] : null;
+      const opts = it.sol === 'bracelet' ? Object.keys(BRACELETS).map(function (m) { return { key: m, name: m }; }) : it.sol === 'tip' ? g.tips : it.sol === 'legtip' ? (g.legTips || []) : it.sol === 'implant' ? g.implants : it.sol === 'arm' ? [{ key: 'new', name: 'новый' }, { key: 'rebuilt', name: 'перебранный' }] : null;
       return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 6 }}>
           {field('Название в каталоге', <LiveField value={it.name} onCommit={function (val) { upd(it.id, { name: val }); }} style={inp} />)}

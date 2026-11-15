@@ -1,5 +1,5 @@
 import { uid } from '../utils/dice';
-import { CASSETTES, TIPS, IMPLANTS, ARM_PRICE, LEG_PRICE, HVATKA_PRICE } from './gear';
+import { CASSETTES, TIPS, LEG_TIPS, IMPLANTS, ARM_PRICE, LEG_PRICE, HVATKA_PRICE } from './gear';
 
 /* Стартовый каталог «За Чертой · 2035». Цены — в полисных еврорублях.
    notForSale — купить нельзя, выдаёт только мастер. */
@@ -74,7 +74,10 @@ function buildMiscDefaults() {
     { cat: 'solution', sol: 'leg', name: 'Нога «Опора»', desc: 'Гнездо.', price: LEG_PRICE },
   ];
   TIPS.filter(function (t) { return t.key !== 'kist'; }).forEach(function (t) {
-    items.push({ cat: 'solution', sol: 'tip', gearKey: t.key, name: 'Насадка «' + t.name + '»', desc: [(t.effects || []).map(function (e) { return '+' + e.amount + ' ' + e.skill; }).join(', '), t.text].filter(Boolean).join(' · '), price: t.price || 60 });
+    items.push({ cat: 'solution', sol: 'tip', gearKey: t.key, name: 'Насадка «' + t.name.replace(/[«»]/g, '') + '»', desc: [(t.effects || []).map(function (e) { return '+' + e.amount + ' ' + e.skill; }).join(', '), t.text].filter(Boolean).join(' · '), price: t.price || 60 });
+  });
+  LEG_TIPS.filter(function (t) { return t.key !== 'stopa'; }).forEach(function (t) {
+    items.push({ cat: 'solution', sol: 'legtip', gearKey: t.key, name: 'Насадка на ногу «' + t.name.replace(/[«»]/g, '') + '»', desc: [(t.effects || []).map(function (e) { return '+' + e.amount + ' ' + e.skill; }).join(', '), t.text].filter(Boolean).join(' · '), price: t.price || 60 });
   });
   IMPLANTS.forEach(function (d) {
     items.push({ cat: 'solution', sol: 'implant', kind2: d.kind === 'addon' ? 'addon' : 'implant', gearKey: d.key, name: d.name, desc: [(d.effects || []).filter(function (e) { return e.skill || e.stat; }).map(function (e) { return e.type === 'stat_set' ? 'Тело ' + e.value : '+' + e.amount + ' ' + (e.skill || 'Тело'); }).join(', '), d.text].filter(Boolean).join(' · '), price: d.price || 0, notForSale: d.kind === 'full' });

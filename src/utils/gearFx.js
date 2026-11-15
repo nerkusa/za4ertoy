@@ -3,6 +3,7 @@
    вызывающий код. */
 import { NOISE } from '../data/gear';
 import { findBy } from '../data/traits';
+import { prosthesesOf } from './crits';
 import { r1 } from './dice';
 
 /* Срыв на броске навыка skill.
@@ -30,9 +31,10 @@ function fumbleFx(c,inf,skill,R,d10){
     }
   }
   var tipSrc=srcs.find(function(s){return s.src.from==="tip"});
-  var arm=c.solutions&&c.solutions.arm;
+  var pros=prosthesesOf(c);var lk=tipSrc&&tipSrc.src.limb;var arm=lk?pros[lk]:null;
   if(tipSrc&&arm&&!arm.broken&&(R.fumble||(arm.grade==="rebuilt"&&R.base===2))){
-    out.patch.solutions=Object.assign({},c.solutions,{arm:Object.assign({},arm,{broken:true})});
+    pros[lk]=Object.assign({},arm,{broken:true});out.patch.prostheses=pros;
+    if(c.solutions&&(c.solutions.arm||c.solutions.leg))out.patch.solutions=Object.assign({},c.solutions,{arm:null,leg:null});
     out.logs.push({type:"noise",label:"Насадка «"+tipSrc.src.name+"» сломалась",detail:R.fumble?"срыв на броске":"перебранный протез: выпало 2",total:0});
     out.notes.push("Насадка «"+tipSrc.src.name+"» сломалась");
   }
@@ -66,7 +68,16 @@ function syncGearWeapons(c,cat,gearWeaponsFn){
   if(c.equippedWeaponOff&&!keep.some(function(w){return w.id===c.equippedWeaponOff}))patch.equippedWeaponOff=null;
   return patch;
 }
+/* Щиты от железа («Заслон») держим в c.shields с пометкой gearKey */
+function syncGearShields(c,cat,gearShieldsFn){
+  var want=gearShieldsFn(c,cat);var have=(c.shields||[]);
+  var keep=have.filter(function(x){return !x.gearKey||want.some(function(g){return g.id===x.gearKey})});
+  want.forEach(function(g){if(!keep.some(function(x){return x.gearKey===g.id})){var ns=Object.assign({},g,{id:g.id+"_"+Date.now().toString(36),gearKey:g.id,maxHp:g.hp});delete ns.gear;keep=keep.concat([ns])}});
+  var patch={shields:keep};
+  if(c.equippedShield&&!keep.some(function(x){return x.id===c.equippedShield}))patch.equippedShield=null;
+  return patch;
+}
 /* Идёт ли бой для персонажа: он в списке инициативы */
 function inCombat(initiative,charId){return !!(initiative&&Array.isArray(initiative.list)&&initiative.list.some(function(x){return x.id===charId}))}
 
-export { fumbleFx, slepDC, slepOthers, slepCheck, fakeOutcome, syncGearWeapons, inCombat, findBy };
+export { syncGearShields, fumbleFx, slepDC, slepOthers, slepCheck, fakeOutcome, syncGearWeapons, inCombat, findBy };

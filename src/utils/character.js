@@ -78,7 +78,7 @@ function mHP(f,c){
   var base=(f.telo||0)*2+(f.reak||0)*2+((c&&c.hpRoll)||0)+((c&&c.levelHp)||0);
   if(!c)return Math.max(1,base);
   var bonus=0;
-  activeTraitEffects(c,getTraits()).forEach(function(e){if(e.type==="hp_flat")bonus+=(e.amount||0)});
+  activeTraitEffects(c,getTraits()).forEach(function(e){if(e.type==="hp_flat"||e.type==="max_hp")bonus+=(e.amount||0)});
   return Math.max(1,base+bonus);
 }
 function nC(name){return{name:name||"",level:1,xp:0,portrait:"",bio:"",locked:false,
@@ -87,7 +87,8 @@ function nC(name){return{name:name||"",level:1,xp:0,portrait:"",bio:"",locked:fa
   inventory:[],shakenPenalty:0,broken:false,
   stats:iS(),skills:iSk(),skillPts:0,money:0,profession:"none",origin:"post",
   dose:0,diseases:[],crits:[],combatDepoUsed:false,depoCharge:1,
-  bracelet:null,cassettes:[],solutions:{arm:null,leg:null,implants:[],addons:[]},molva:0}}
+  bracelet:null,cassettes:[],solutions:{arm:null,leg:null,implants:[],addons:[]},
+  prostheses:{armL:null,armR:null,legL:null,legR:null,armTips:[],legTips:[]},molva:0}}
 
 /* Опыт до следующего уровня растёт на 100 за уровень. xpForLevel(N) —
    сколько всего опыта нужно набрать с нуля, чтобы ДОСТИЧЬ уровня N. */

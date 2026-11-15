@@ -202,6 +202,10 @@ return(<div style={{flex:1,display:"flex",flexDirection:"column"}}>
 {pr.initiative&&<button onClick={endCombat} title="Завершить бой" style={{padding:"5px 8px",borderRadius:0,border:"1px solid #8a3b2230",background:"#efe2d6",color:"#8a3b22",fontSize:10,cursor:"pointer"}}>Конец</button>}
 </div>
 </div>
+{/* Флаги сцены: влияют на штрафы у всех */}
+<div style={{display:"flex",gap:6,flexWrap:"wrap",alignItems:"center"}}><span style={{fontSize:11,color:"#6a6052",fontFamily:"var(--f-mono)",textTransform:"uppercase"}}>Сцена:</span>
+{[["swamp","Топь","−2 к Атлетике и Уклонению всем; железной ноге без «Болотохода» ещё −2"],["offroad","Бездорожье","Ролики: −2 к Уклонению"],["moving","На ходу","Стрельба из едущей машины −2, водитель −4"]].map(function(f){var on=!!(pr.scene||{})[f[0]];return <button key={f[0]} title={f[2]} className={"btn sm"+(on?" main":"")} onClick={function(){var n=Object.assign({},pr.scene||{});n[f[0]]=!on;if(pr.saveScene)pr.saveScene(n);pr.addLog({who:"ГМ",type:"spawn",label:"Сцена: "+f[1]+(on?" — снято":" — включено"),detail:f[2],total:0})}}>{f[1]}</button>})}
+</div>
 {/* Выбор цели для атак NPC по игрокам */}
 {<div style={{border:"2px solid #4f5b2a28",borderRadius:0,padding:"6px 8px",background:"#e5e4cc"}}>
 <label style={Object.assign({},S.lb,{color:"#4f5b2a"})}>Цель NPC-атак (игрок)</label>
