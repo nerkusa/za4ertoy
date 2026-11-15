@@ -8,6 +8,8 @@ import { critsAfterRest } from '../../utils/crits';
 import CritsCard from '../CritsCard';
 import { findBy, nestInfo, solutionList, ironSteps } from '../../data/traits';
 import { grantPatch, grantLabel } from '../../utils/grant';
+import { rollTrinket } from '../../data/trinkets';
+import { r1 } from '../../utils/dice';
 import { fmtMoney, priceNum } from '../../utils/currency';
 import { IconParty, IconChat, IconHistory, IconSkull, IconShop, IconGear, IconChar, IconLib } from '../../icons/index';
 import BestiaryEditor from './BestiaryEditor';
@@ -150,6 +152,7 @@ function PartyCard(pr) {
           <select value={nd} onChange={function (e) { setNd(e.target.value); }}>{DISEASES.map(function (d) { return <option key={d.key} value={d.key}>{d.name}</option>; })}</select>
           <button className="btn sm" onClick={function () { const d = diseaseByKey(nd); if (d && !dis.some(function (x) { return x.key === d.key; })) { save({ diseases: dis.map(function (x) { return { key: x.key, name: x.name }; }).concat([{ key: d.key, name: d.name }]) }); log('Болезнь', c.name + ': ' + d.name); } }}>Заразить</button>
           {dis.map(function (d) { return <button key={d.key} className="btn sm" onClick={function () { save({ diseases: dis.filter(function (x) { return x.key !== d.key; }).map(function (x) { return { key: x.key, name: x.name }; }) }); log('Снял болезнь', c.name + ': ' + d.name); }}>{'Снять: ' + d.name}</button>; })}
+          <button className="btn sm" title="d30 по таблице безделушек, в сумку" onClick={function () { const t = rollTrinket(r1); save(grantPatch(c, getTraits(), t.item)); log('Безделушка', c.name + ': d30 = ' + t.roll + ' — ' + t.item.desc + ' (' + t.item.price + ' ер.)'); if (pr.addLog) pr.addLog({ who: 'ГМ', type: 'give', label: 'ГМ выдал безделушку → ' + (c.name || '?'), detail: t.item.desc, total: 0 }); }}>Безделушка</button>
           <button className="btn sm" onClick={function () { save({ molva: Math.max(-5, (c.molva || 0) - 1) }); }}>Молва −</button>
           <button className="btn sm" onClick={function () { save({ molva: Math.min(5, (c.molva || 0) + 1) }); }}>Молва +</button>
           <button className="btn sm" style={{ borderColor: 'var(--rust)', color: 'var(--rust)' }} onClick={del}>Удалить</button>

@@ -58,7 +58,7 @@ function pickItem(it){
     if(exH){n=n.map(function(i){return i===exH?Object.assign({},i,{qty:(i.qty||0)+1}):i})}
     else{n=n.concat([{id:uid(),name:it.name,qty:1,equipped:false,heal:heal,healWill:!!it.healWill,doseHeal:doseHeal}])}
   } else {
-    n=n.concat([{id:uid(),name:it.name,qty:1,equipped:false}]);
+    n=n.concat([Object.assign({id:uid(),name:it.name,qty:1,equipped:false},it.charges!=null?{charges:it.charges}:{},it.desc?{desc:it.desc}:{})]);
   }
   patch.inventory=n;
   sv(Object.assign({},c,patch));
@@ -104,8 +104,8 @@ return(<div key={it.id} style={{display:"flex",alignItems:"center",gap:8,borderB
 <div className="log">
 {inv.map(function(it,idx){var usable=it.heal||it.doseHeal;return <div key={(it.id!=null?it.id:"i")+"_"+idx} style={{display:"flex",alignItems:"center",gap:6,borderBottom:"1px solid var(--line)",padding:"5px 0",flexWrap:"wrap"}}>
 <button title="Отметить «при себе»" onClick={function(){sv(Object.assign({},c,{inventory:inv.map(function(i,j){return j===idx?Object.assign({},i,{equipped:!i.equipped}):i})}))}} style={{width:22,height:22,border:"1px solid var(--ink)",background:it.equipped?"var(--ink)":"var(--paper)",padding:0}}/>
-<span style={{flex:1,minWidth:90}}>{it.name}{it.heal?<span className="mono" style={{fontSize:11,color:"var(--swamp)",marginLeft:6}}>{"+"+it.heal}</span>:null}{it.doseHeal?<span className="mono" style={{fontSize:11,color:"var(--swamp)",marginLeft:6}}>{"−"+it.doseHeal+" Дозы"}</span>:null}{it.proj?<span className="mono" style={{fontSize:11,color:"var(--muted)",marginLeft:6}}>{it.ptype}</span>:null}</span>
-{usable&&<button className="btn sm" onClick={function(){useItem(idx)}}>Применить</button>}
+<span style={{flex:1,minWidth:90}}>{it.name}{it.heal?<span className="mono" style={{fontSize:11,color:"var(--swamp)",marginLeft:6}}>{"+"+it.heal}</span>:null}{it.doseHeal?<span className="mono" style={{fontSize:11,color:"var(--swamp)",marginLeft:6}}>{"−"+it.doseHeal+" Дозы"}</span>:null}{it.proj?<span className="mono" style={{fontSize:11,color:"var(--muted)",marginLeft:6}}>{it.ptype}</span>:null}{it.desc?<span className="hint" style={{display:"block",fontSize:12}}>{it.desc}</span>:null}</span>
+{usable&&<button className="btn sm" onClick={function(){useItem(idx)}}>Применить</button>}{it.charges!=null&&<button className="btn sm" disabled={it.charges<=0} title="Списать одно применение" onClick={function(){sv(Object.assign({},c,{inventory:inv.map(function(i,j){return j===idx?Object.assign({},i,{charges:Math.max(0,(i.charges||0)-1)}):i})}));if(pr.addLog)pr.addLog({who:c.name||"???",type:"rest",label:it.name+": применение ("+(it.charges-1)+" осталось)",detail:it.desc||"",total:0})}}>{"Применить · "+it.charges}</button>}
 <span className="pm" style={{marginLeft:0}}><button onClick={function(){setQty(idx,-1)}}>−</button></span>
 <b className="mono" style={{minWidth:22,textAlign:"center"}}>{it.qty}</b>
 <span className="pm" style={{marginLeft:0}}><button onClick={function(){setQty(idx,1)}}>+</button></span>

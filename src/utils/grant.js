@@ -10,8 +10,9 @@ function grantPatch(c,cat,it,opts){
   if(it.cat==="weapon"){
     var w={id:uid(),name:it.name,type:it.wtype,dmgType:it.dmgType,bonus:it.bonus||0,dmgDice:it.dmgDice,hands:it.hands||1,desc:it.desc||""};
     if(it.hands===1.5){w.dmgDice2h=it.dmgDice2h;w.bonus2h=it.bonus2h||0}
-    if(it.dmgType==="П"){w.clip=it.clip||1;w.ammo=it.clip||1}
-    if(it.wtype==="Archery")w.ammoType=it.ammoType||"Болт";
+    if(it.wtype==="Guns"||it.dmgType==="П"){w.clip=it.clip||1;w.ammo=it.clip||1;if(it.ammoType)w.ammoType=it.ammoType}
+    if(it.wtype==="Archery"&&it.ammoType)w.ammoType=it.ammoType;
+    ["aimBonus","charges","consumable"].forEach(function(f){if(it[f]!=null)w[f]=it[f]});
     return{weapons:(c.weapons||[]).concat([w])};
   }
   if(it.cat==="armor")return{armors:(c.armors||[]).concat([{id:uid(),name:it.name,type:it.type,slot:it.slot||"body",hp:it.hp,maxHp:it.hp,desc:it.desc||""}])};
@@ -27,7 +28,7 @@ function grantPatch(c,cat,it,opts){
   else if(it.heal||it.doseHeal){var exH=inv.find(function(i){return i.name===it.name&&(i.heal||"")===(it.heal||"")&&(i.doseHeal||0)===(it.doseHeal||0)});
     if(exH)inv=inv.map(function(i){return i===exH?Object.assign({},i,{qty:(i.qty||0)+1}):i});
     else inv=inv.concat([{id:uid(),name:it.name,qty:1,equipped:false,heal:it.heal||"",healWill:!!it.healWill,doseHeal:it.doseHeal||0}])}
-  else inv=inv.concat([{id:uid(),name:it.name,qty:1,equipped:false}]);
+  else inv=inv.concat([Object.assign({id:uid(),name:it.name,qty:1,equipped:false},it.charges!=null?{charges:it.charges}:{},it.desc?{desc:it.desc}:{},it.trinket?{trinket:true}:{})]);
   return{inventory:inv};
 }
 /* Как выдача выглядит в общем логе: палёнка — как оригинал */

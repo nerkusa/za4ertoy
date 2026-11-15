@@ -369,3 +369,34 @@ describe('железо v3', function(){
     l=give(l,{t:"legtip",key:"bolotohod"});l=Object.assign(l,O.setTip(l,CAT,"legR","bolotohod"));expect(CH.cF(l).eSk["Атлетика"]).toBe(0);
   });
 });
+
+describe('каталог и бестиарий v3', function(){
+  var SD=require('../data/shopDefaults');var N=require('../data/npcDefaults');var TR=require('../data/trinkets');var GR=require('../utils/grant');var CH=require('../utils/character');
+  var all=SD.buildShopDefaults().concat(SD.buildMiscDefaults());
+  function find(n){return all.find(function(i){return i.name===n})}
+  test('новое оружие с книжными цифрами', function(){
+    expect(find('Топор «Колун»')).toMatchObject({wtype:'Battle',dmgDice:'2d6',hands:1.5,bonus2h:2,price:40});
+    expect(find('«Дальнобой»')).toMatchObject({dmgDice:'4d6',bonus:2,clip:5,aimBonus:2,price:900});
+    expect(find('«Казённый», пулемёт').notForSale).toBe(true);
+    expect(find('«Коктейль»').consumable).toBe(true);expect(find('Шокер «Ёжик»').charges).toBe(3);
+    expect(find('Гвозди (50 шт.)')).toMatchObject({ptype:'Гвозди',bundleQty:50,price:5});
+    ['Крышка люка','Дверь от буханки','Мотошлем','Сапёрный нагрудник','Шейные кольца','Канистра горючки (20 л)','Сок','Бешенка','Аптечка фельдшера'].forEach(function(n){expect(find(n)).toBeTruthy()});
+    expect(find('Насадка на руку: Клинок «Жнец»')).toBeTruthy();expect(find('Насадка на ногу: «Педаль»')).toBeTruthy();
+  });
+  test('«Гвоздомёт» получает магазин и тянет гвозди', function(){
+    var p=GR.grantPatch(CH.nC("x"),CAT,find('«Гвоздомёт»'));expect(p.weapons[0]).toMatchObject({clip:20,ammo:20,ammoType:'Гвозди',type:'Guns'});
+  });
+  test('безделушка: d30 и цена 1d6', function(){
+    expect(TR.TRINKETS.length).toBe(30);
+    var t=TR.rollTrinket(function(n){return n===30?7:4});expect(t.roll).toBe(7);expect(t.item.price).toBe(4);expect(t.item.desc).toMatch(/Зуб чучуны/);
+  });
+  test('фракции в бестиарии: у всех поле faction, вожаки ×2 опыта, Лента железная', function(){
+    var b=N.buildNpcDefaults();var all=[];Object.keys(b).forEach(function(cat){Object.keys(b[cat]).forEach(function(k){if(k!=="_created")all.push(b[cat][k])})});
+    all.forEach(function(n){expect(n).toHaveProperty('faction')});
+    var fr=Object.keys(b['Фракции за трактом']).filter(function(k){return k!=="_created"}).map(function(k){return b['Фракции за трактом'][k]});
+    expect(fr.map(function(n){return n.faction}).sort()).toEqual(['bezbash','kult','lenta','pokrov','rodnya','sok']);
+    var byName={};all.forEach(function(n){byName[n.name]=n});
+    expect(byName['Людоед (Родня)'].xpReward).toBe(26);expect(byName['Накал'].xpReward).toBe(76);expect(byName['Мародёр'].faction).toBeNull();
+    expect(byName['Голос'].zoneMult['Голова']).toBe(1);expect(byName['Лентач-сборщик'].halfKR).toBe(true);
+  });
+});
