@@ -1,4 +1,5 @@
 import { ZONES } from '../data/combat';
+import { critOutcome, critPatch } from './crits';
 
 /* ── calcAE: урон по броне/HP по типу урона ── */
 /* Голова(×3) и Пах(×2) ignoreArmor — броня не считается, урон идёт напрямую в HP с множителем */
@@ -25,7 +26,10 @@ function calcAE(at,dt,rd){
 /* ── applyDmgToNpc: применить урон к заспавненному NPC ── */
 function applyDmgToNpc(npc,rawDmg,dmgType,zoneName,saveSpawnedFn,spawnedAll,npcId,addLog,who,onNpcDeath,srcLabel,broadcast){
   var z=ZONES.find(function(x){return x.name===zoneName})||ZONES[2];
-  var multiplied=Math.floor(rawDmg*z.mult);
+  /* Железные NPC: свой множитель зоны и «К и Р вдвое слабее» (по умолчанию как в базе) */
+  var zm=(npc.zoneMult&&npc.zoneMult[z.name]!=null)?Math.min(z.mult,npc.zoneMult[z.name]):z.mult;
+  if(npc.halfKR&&(dmgType==="К"||dmgType==="Р"))rawDmg=Math.floor(rawDmg/2);
+  var multiplied=Math.floor(rawDmg*zm);
   var ignArmor=z.ignoreArmor;
   /* Определяем броню по слоту зоны */
   var armorType="none",armorHp=0,armorMaxHp=0,armorHpKey="",armorName="";
@@ -58,6 +62,9 @@ function applyDmgToNpc(npc,rawDmg,dmgType,zoneName,saveSpawnedFn,spawnedAll,npcI
   var newHp=Math.max(0,curHp-ae.hd);
   var upd=Object.assign({},npc,{hp:newHp});
   if(armorHpKey&&ae.ad>0)upd[armorHpKey]=newArmorHp;
+  /* Крит: 10+ Здоровья за удар после брони */
+  var _co=npc.ironCrit?null:critOutcome(npc,z.name,ae.hd,null,true);var _crLabel=npc.ironCrit&&ae.hd>=10?"крит по железу: ломается деталь":(_co?_co.label:"");
+  if(_co)Object.assign(upd,critPatch(npc,_co));
   var sp=Object.assign({},spawnedAll);sp[npcId]=upd;
   saveSpawnedFn(sp);
   addLog({
@@ -67,6 +74,7 @@ function applyDmgToNpc(npc,rawDmg,dmgType,zoneName,saveSpawnedFn,spawnedAll,npcI
     total:ae.hd
   });
   if(broadcast){broadcast({attackerName:who,srcLabel:srcLabel||"",npcName:npc.name,zone:z.name,zoneE:z.e,zoneMult:z.mult,dmgType:dmgType,dmg:ae.hd,oldHp:curHp,newHp:newHp,desc:ae.desc,ts:Date.now()});}
+  if(_crLabel&&addLog)setTimeout(function(){addLog({who:who,type:"crit",label:npc.name+": "+_crLabel,detail:"удар на "+ae.hd+" Здоровья",total:0})},5);
   if(newHp<=0&&onNpcDeath){onNpcDeath({npcName:npc.name});}
 }
 

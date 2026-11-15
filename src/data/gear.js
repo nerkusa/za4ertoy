@@ -97,9 +97,33 @@ var IRON_STAGES=[
   {at:7,name:"Чужой",text:"−2 к Характеру с обычными людьми."}
 ];
 var UPKEEP=10;
-var DISEASES=["Болотная лихорадка","Лентец","Чахотка","Гаревый кашель","Сибирка","Клещ","Цинга","Горячка пятна"];
+/* Болезни (глава 6 «Болезни в игре»). effects — механика:
+   skill_bonus — к навыку; stat_roll — ко всем броскам от характеристики;
+   all_roll — ко всем броскам; hp_flat — к максимуму Здоровья;
+   aim_pen — к штрафу прицела. flags — особые правила (отдых, бинты,
+   синька, ежедневная потеря). Остальное — text, применяет мастер. */
+var FINE_WORK=["Механика","Медицина","Воровство"];
+function dz(key,name,effects,flags,cure,text){return{key:key,name:name,effects:effects||[],flags:flags||{},cure:cure,text:text}}
+var DISEASES=[
+  dz("bolotnaya","Болотная лихорадка",[{type:"stat_roll",stat:"telo",amount:-2}],{restHalf:true},"неделя, СЛ 12","−2 к броскам от Тела, отдых восстанавливает вдвое меньше"),
+  dz("lentec","Лентец",[{type:"hp_flat",amount:-3}],{},"неделя, СЛ 14","−3 к максимальному Здоровью, еды нужно вдвое больше"),
+  dz("chahotka","Чахотка",[{type:"skill_bonus",skill:"Атлетика",amount:-2}],{},"месяц, СЛ 20","−2 к Атлетике. После каждого боя проверка Тела СЛ 12, иначе −1d6 Здоровья"),
+  dz("garevy","Гаревый кашель",[{type:"skill_bonus",skill:"Скрытность",amount:-2},{type:"skill_bonus",skill:"Выдержка",amount:-1}],{},"неделя, СЛ 14","−2 к Скрытности: кашель слышно. −1 к Выдержке"),
+  dz("sibirka","Сибирка",[],{dailyHp:-1,noRestDaily:true},"неделя, СЛ 20","−1 Здоровья каждый день, отдых его не возвращает"),
+  dz("kleshch","Клещ",[{type:"skill_bonus",skill:"Огнестрел",amount:-2},{type:"skill_bonus",skill:"Метание",amount:-2}].concat(FINE_WORK.map(function(n){return{type:"skill_bonus",skill:n,amount:-2}})),{},"неделя, СЛ 14","Руки трясутся: −2 к Огнестрелу, Метанию и тонкой работе"),
+  dz("cinga","Цинга",[{type:"skill_bonus",skill:"Убеждение",amount:-2},{type:"skill_bonus",skill:"Торг",amount:-2}],{restHalf:true,healHalf:true},"неделя, СЛ 12","−2 к Убеждению и Торгу. Бинты и отдых лечат вдвое меньше"),
+  dz("goryachka","Горячка пятна",[{type:"all_roll",amount:-2}],{},"неделя, СЛ 16","−2 ко всем броскам. Заразна: кто ухаживает, тот проверяет Тело, СЛ 12"),
+  dz("ozherelye","Ожерелье",[],{dailyWill:-1},"месяц, СЛ 16","−1 Воли каждый день, пока не начнут лечить"),
+  dz("belaya","Белая кровь",[{type:"hp_flat",amount:-5}],{noSinka:true},"не лечится","−5 к максимальному Здоровью, синька не снимает Дозу"),
+  dz("gnil","Гниль",[],{dailyHp:-1},"только ампутация","−1 Здоровья в день. Через неделю конечность не спасти"),
+  dz("mutny","Мутный глаз",[{type:"skill_bonus",skill:"Внимательность",amount:-3},{type:"aim_pen",amount:3}],{},"глаз «Прицел» или «Ночник»","−3 к Внимательности и к прицельным выстрелам")
+];
+function diseaseByKey(k){return DISEASES.find(function(d){return d.key===k||d.name===k})||null}
+/* Болезни персонажа объектами; старые строки-названия тоже понимаем */
+function diseaseList(c){return ((c&&c.diseases)||[]).map(function(x){var key=typeof x==="string"?x:(x&&(x.key||x.name));return diseaseByKey(key)}).filter(Boolean)}
+function diseaseFlag(c,flag){return diseaseList(c).some(function(d){return !!d.flags[flag]})}
 function doseState(d){d=d||0;if(d>=10)return"Край";if(d>=7)return"Горячка пятна";if(d>=4)return"Мутит";return""}
 
 var GEAR_DEFAULTS={cassettes:CASSETTES,tips:TIPS,implants:IMPLANTS};
 
-export { BRACELETS, CASS_CLASSES, CASS_KINDS, kindName, CASSETTES, NOISE, IMPRINT_STAGES, ARM_PRICE, LEG_PRICE, HVATKA_PRICE, FINE_SKILLS, TIPS, IMPLANTS, IRON_STAGES, UPKEEP, DISEASES, doseState, GEAR_DEFAULTS };
+export { BRACELETS, CASS_CLASSES, CASS_KINDS, kindName, CASSETTES, NOISE, IMPRINT_STAGES, ARM_PRICE, LEG_PRICE, HVATKA_PRICE, FINE_SKILLS, TIPS, IMPLANTS, IRON_STAGES, UPKEEP, DISEASES, FINE_WORK, diseaseByKey, diseaseList, diseaseFlag, doseState, GEAR_DEFAULTS };

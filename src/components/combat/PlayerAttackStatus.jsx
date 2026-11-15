@@ -2,6 +2,7 @@ import React from 'react';
 import { db, ref, remove } from '../../firebase';
 import { ZONES, SHIELD_T, zoneByName } from '../../data/combat';
 import { calcAE } from '../../utils/combat';
+import { npcZoneMult, npcRaw, npcCritPatch } from '../../utils/hits';
 import { r1, rN, sm } from '../../utils/dice';
 import PendingAttackPopup from './PendingAttackPopup';
 
@@ -71,7 +72,7 @@ function PlayerAttackStatus(pr){
                 var critM=atk.atkCrit?1.5:1;
                 var rawDmg=Math.floor((sm(dice)+(atk.dmgBonus||0))*critM);
                 var aimed=!!atk.aimedZone;var zoneD=aimed?0:r1(6);var zoneObj=aimed?zoneByName(atk.aimedZone):ZONES[zoneD-1];var zoneRoll=aimed?"прицел":"1d6="+zoneD;
-                var multiplied=Math.floor(rawDmg*zoneObj.mult);
+                var multiplied=Math.floor(npcRaw(npc,rawDmg,atk.dmgType)*npcZoneMult(npc,zoneObj));
                 var npcArmorType=zoneObj.slot==="head"?(npc.armorHead||"none"):(npc.armorBody||"none");
                 var npcArmorHp=zoneObj.slot==="head"?(npc.armorHeadHp||0):(npc.armorBodyHp||0);
                 if(npcArmorHp<=0)npcArmorType="none";
@@ -82,6 +83,7 @@ function PlayerAttackStatus(pr){
                 var updNpc=Object.assign({},npc,{hp:newNpcHp});
                 if(shieldDmg>0)updNpc.shieldHp=Math.max(0,(npc.shieldHp||0)-shieldDmg);
                 if(ae.ad>0){if(zoneObj.slot==="head")updNpc.armorHeadHp=Math.max(0,(npc.armorHeadHp||0)-ae.ad);else updNpc.armorBodyHp=Math.max(0,(npc.armorBodyHp||0)-ae.ad);}
+                var _cr=npcCritPatch(npc,zoneObj.name,ae.hd);Object.assign(updNpc,_cr.patch);if(_cr.label)setTimeout(function(){addLog({who:atk.attackerName,type:"crit",label:atk.npcName+": "+_cr.label,detail:"удар на "+ae.hd+" Здоровья",total:0})},5);
                 var spAll=Object.assign({},spawned);spAll[atk.npcId]=updNpc;
                 if(saveSpawned)saveSpawned(spAll);
                 if(addLog)addLog({who:atk.attackerName,type:"dmg",label:""+atk.weaponName+" → "+atk.npcName+" ["+zoneObj.e+zoneObj.name+"] "+ae.hd+" HP",detail:zoneRoll+" "+zoneObj.name+" | "+ae.desc+shieldDesc+" | Здоровье "+(npc.hp||0)+"→"+newNpcHp,total:ae.hd});

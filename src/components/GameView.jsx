@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { r1 } from '../utils/dice';
+import { bleedAmount } from '../utils/crits';
+import { cF, hpOf } from '../utils/character';
 import { IconBattle, IconChat, IconLib, IconScroll, IconSkills, IconBracelet, IconBody, IconInv } from '../icons/index';
 import Dossier from './Dossier';
 import CreationWizard from './CreationWizard';
@@ -32,6 +34,16 @@ function quickRoll(charId){sT("chat");sCoopTarget(charId)}
 useEffect(function(){if(!c.hpRoll)pr.save(Object.assign({},c,{hpRoll:r1(10)}))},[c._fbId]);
 /* «Депо» действует до конца боя: бой кончился — флаг снимается */
 useEffect(function(){if(c.combatDepoUsed&&!pr.initiative&&!pr.isGM)pr.save(Object.assign({},c,{combatDepoUsed:false}))},[!!pr.initiative,c.combatDepoUsed]);
+/* Кровотечение: в начале своего хода теряешь Здоровье. Списывает только
+   клиент игрока, один раз на ход (bleedTick = раунд:ход). */
+var _ini=pr.initiative;var _turnKey=_ini&&Array.isArray(_ini.list)&&_ini.list[_ini.turn||0]&&_ini.list[_ini.turn||0].id===c._fbId?(_ini.round||1)+":"+(_ini.turn||0):"";
+useEffect(function(){
+  if(pr.isGM||!_turnKey||c.bleedTick===_turnKey)return;
+  var b=bleedAmount(c);if(!b){pr.save(Object.assign({},c,{bleedTick:_turnKey}));return}
+  var h=hpOf(c,cF(c).fs);var nh=Math.max(0,h.cur-b);
+  pr.save(Object.assign({},c,{curHp:nh,bleedTick:_turnKey}));
+  if(pr.addLog)pr.addLog({who:c.name||"???",type:"crit",label:(c.name||"???")+": кровотечение −"+b+" Здоровья",detail:"начало хода · Здоровье "+h.cur+"→"+nh,total:b});
+},[_turnKey]);
 var tabs=[{id:"skills",l:"Навыки",ic:<IconSkills/>},{id:"combat",l:"Бой",ic:<IconBattle/>},{id:"bracelet",l:"Браслет",ic:<IconBracelet/>},{id:"body",l:"Тело",ic:<IconBody/>},{id:"bag",l:"Сумка",ic:<IconInv/>},{id:"chat",l:"Чат и лог",ic:<IconChat/>},{id:"library",l:"Лор",ic:<IconLib/>},{id:"guide",l:"Памятка",ic:<IconScroll/>}];
 var pendAtk=pr.pendAtk||{};var clearPA=pr.clearPendingAttack;var isGMv=pr.isGM;
 /* Лист не принят — игрок проходит пошаговое создание */

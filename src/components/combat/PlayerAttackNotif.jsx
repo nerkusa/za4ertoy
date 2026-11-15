@@ -2,6 +2,8 @@ import React from 'react';
 import { db, ref, update, remove } from '../../firebase';
 import { ZONES, SHIELD_T, zoneByName } from '../../data/combat';
 import { calcAE } from '../../utils/combat';
+import { npcZoneMult, npcRaw, npcCritPatch } from '../../utils/hits';
+import { npcCritPen } from '../../utils/crits';
 import { willPenalty } from '../../utils/character';
 import { r1, rN, sm, rollHit } from '../../utils/dice';
 import DamagePopup from './DamagePopup';
@@ -28,7 +30,7 @@ function PlayerAttackNotif(pr){
       var dice=rN(parseInt(m[1]),parseInt(m[2]));
       var critM=dmgAtk.atkCrit?1.5:1;
       var rawDmg=Math.floor((sm(dice)+(dmgAtk.dmgBonus||0))*critM);
-      var multiplied=Math.floor(rawDmg*zoneObj.mult);
+      var multiplied=Math.floor(npcRaw(dmgNpc,rawDmg,dmgAtk.dmgType)*npcZoneMult(dmgNpc,zoneObj));
       var npcArmorType=zoneObj.slot==="head"?(dmgNpc.armorHead||"none"):(dmgNpc.armorBody||"none");
       var npcArmorHp=zoneObj.slot==="head"?(dmgNpc.armorHeadHp||0):(dmgNpc.armorBodyHp||0);
       if(npcArmorHp<=0)npcArmorType="none";
@@ -39,6 +41,7 @@ function PlayerAttackNotif(pr){
       var updNpc=Object.assign({},dmgNpc,{hp:newNpcHp});
       if(shieldDmg>0)updNpc.shieldHp=Math.max(0,(dmgNpc.shieldHp||0)-shieldDmg);
       if(ae.ad>0){if(zoneObj.slot==="head")updNpc.armorHeadHp=Math.max(0,(dmgNpc.armorHeadHp||0)-ae.ad);else updNpc.armorBodyHp=Math.max(0,(dmgNpc.armorBodyHp||0)-ae.ad);}
+                var _cr=npcCritPatch(dmgNpc,zoneObj.name,ae.hd);Object.assign(updNpc,_cr.patch);if(_cr.label)setTimeout(function(){addLog({who:dmgAtk.attackerName,type:"crit",label:dmgAtk.npcName+": "+_cr.label,detail:"удар на "+ae.hd+" Здоровья",total:0})},5);
       var spAll=Object.assign({},spawned);spAll[dmgAtk.npcId]=updNpc;saveSpawned(spAll);
       addLog({who:dmgAtk.attackerName,type:"dmg",label:""+dmgAtk.weaponName+" → "+dmgAtk.npcName+" ["+zoneObj.e+zoneObj.name+"] "+ae.hd+" HP",detail:zoneRoll+" "+zoneObj.name+" | "+ae.desc+shieldDesc+" | Здоровье "+(dmgNpc.hp||0)+"→"+newNpcHp,total:ae.hd});
       onRoll&&onRoll({label:dmgAtk.attackerName+" Урон",d10:null,parts:[{label:dmgAtk.dmgDice||"1d6",value:sm(dice)},{label:"Бнс",value:dmgAtk.dmgBonus||0}],total:rawDmg,subtext:zoneObj.e+" "+zoneObj.name+" ×"+zoneObj.mult+(zoneObj.ignoreArmor?" (мимо брони)":"")+"\n"+ae.desc+"\n→ "+dmgAtk.npcName+": "+(dmgNpc.hp||0)+"→"+newNpcHp+" HP"});
@@ -84,7 +87,7 @@ function PlayerAttackNotif(pr){
   function doDodge(){
     if(!npc)return;
     var st=npc.stats||{};var sk=npc.skills||{};var exsk=npc.extraSkills||{};
-    var wp=willPenalty(npcCurWill());
+    var wp=willPenalty(npcCurWill())+npcCritPen(npc,"all");
     var R=rollHit();var d=R.d;
     if(isFear){
       var wv0=st.volya||0;var sc0=exsk["Выдержка"]||0;var t0=d+wv0+sc0+wp;
@@ -94,7 +97,7 @@ function PlayerAttackNotif(pr){
     }
     var dv=st.reak||0;
     var dg=sk.dodge||0;
-    var t=d+dv+dg+wp;
+    var t=d+dv+dg+wp+npcCritPen(npc,"dodge");
     var det="d10("+d+")+Реакция("+dv+")+Уклонение("+dg+")"+(wp?" "+wp+"(деморализован)":"")+"="+t;
     var dodged=t>=atk.hitRoll;
     update(ref(db,"rooms/"+pr.room+"/pendingAttacks/"+id),{dodgeRoll:t,status:dodged?"done":"pending_dmg",dodgeDetail:det});

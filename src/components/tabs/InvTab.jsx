@@ -3,6 +3,7 @@ import { uid, r1 } from '../../utils/dice';
 import { cF, hpOf, willOf } from '../../utils/character';
 import { priceNum, fmtMoney, tryPay } from '../../utils/currency';
 import LiveField from '../LiveField';
+import { diseaseFlag } from '../../data/gear';
 
 /* "NdM" -> сумма броска */
 function rollDice(d){var m=(""+d).match(/(\d+)d(\d+)/);if(!m)return r1(4);var n=parseInt(m[1])||1,f=parseInt(m[2])||4,t=0;for(var i=0;i<n;i++)t+=r1(f);return t}
@@ -25,10 +26,11 @@ function useItem(idx){
   var it=inv[idx];if(!it||(!it.heal&&!it.doseHeal))return;
   var patch={};var label,sub,amt=0;var fs=cF(c).fs;
   if(it.doseHeal){
+    if(/синьк/i.test(it.name||"")&&diseaseFlag(c,"noSinka")){alert("Белая кровь: синька не снимает Дозу");return}
     amt=parseInt(it.doseHeal)||0;var nd=Math.max(0,(c.dose||0)-amt);patch.dose=nd;
     label=it.name+": Доза −"+amt;sub="Доза: "+(c.dose||0)+" → "+nd;
   } else {
-    amt=rollDice(it.heal);
+    amt=rollDice(it.heal);if(!it.healWill&&diseaseFlag(c,"healHalf"))amt=Math.floor(amt/2);
     if(it.healWill){var w=willOf(c,fs);patch.curWill=Math.min(w.max,w.cur+amt);label=it.name+": +"+amt+" Воли";sub="Восстановлено Воли: +"+amt}
     else{var h=hpOf(c,fs);patch.curHp=Math.min(h.max,h.cur+amt);label=it.name+": +"+amt+" Здоровья";sub="Восстановлено Здоровья: +"+amt}
   }

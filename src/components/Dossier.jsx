@@ -3,7 +3,7 @@ import { cF, hpOf, willOf, hpWords, xpProgress } from '../utils/character';
 import { getProfs } from '../utils/profStore';
 import { getTraits } from '../utils/traitStore';
 import { originOf } from '../data/professions';
-import { IRON_STAGES, doseState } from '../data/gear';
+import { IRON_STAGES, doseState, diseaseList } from '../data/gear';
 import { ironSteps, hasTablet } from '../data/traits';
 import { inCombat } from '../utils/gearFx';
 import LiveField from './LiveField';
@@ -36,7 +36,8 @@ return(<div className="dossier">
   <div className="badges">
     {c.bracelet&&c.bracelet.model?<span className="badge dark">{"MG+ "+c.bracelet.model}</span>:<span className="badge">браслета нет</span>}
     {doseState(dose)&&<span className="badge rust">{doseState(dose)}</span>}
-    {dis.map(function(d){return <span key={d} className="badge rust">{d}</span>})}
+    {diseaseList(c).map(function(d){return <span key={d.key} className="badge rust">{d.name}</span>})}
+    {(c.crits||[]).map(function(x){return <span key={x.id} className="badge rust">{x.name}</span>})}
     {stage&&<span className="badge">{"железо "+steps+" · "+stage.name}</span>}
     {inCombat(pr.initiative,c._fbId)&&<span className="badge dark">в бою</span>}
     {c.shakenPenalty>0&&<span className="badge rust">{"потрясён −"+c.shakenPenalty}</span>}

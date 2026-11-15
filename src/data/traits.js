@@ -9,6 +9,8 @@
    dual_wield, armor_effectiveness (остались от базы). */
 import { BRACELETS, FINE_SKILLS } from './gear';
 import { originOf } from './professions';
+import { diseaseList } from './gear';
+import { critEffects } from '../utils/crits';
 
 function genId(){return "gx_"+Date.now().toString(36)+Math.floor(Math.random()*1000).toString(36)}
 
@@ -93,6 +95,8 @@ function activeTraitEffects(c,cat){
     if(d)(d.effects||[]).forEach(function(e){out.push(Object.assign({},e,{src:{from:d.kind,key:k,name:d.name}}))});
   });
   (originOf(c.origin).effects||[]).forEach(function(e){out.push(Object.assign({},e,{src:{from:"origin",name:originOf(c.origin).name}}))});
+  diseaseList(c).forEach(function(d){d.effects.forEach(function(e){out.push(Object.assign({},e,{src:{from:"disease",name:d.name}}))})});
+  critEffects(c).forEach(function(e){out.push(e)});
   return out;
 }
 /* Двойная атака доступна всем (в базе её открывала черта) */

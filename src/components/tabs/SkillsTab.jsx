@@ -4,6 +4,7 @@ import { cF, rndStats, STAT_POINTS, SKILL_POINTS, statSpent, skillSpent, statCap
 import { rollHit } from '../../utils/dice';
 import { fumbleFx } from '../../utils/gearFx';
 import { fineBlocked } from '../../data/traits';
+import { diseaseList } from '../../data/gear';
 import { getTraits } from '../../utils/traitStore';
 import { IconD10 } from '../../icons/index';
 
@@ -60,7 +61,10 @@ return(<div style={{display:"flex",flexDirection:"column",gap:12}}>
 {DC_LIST.map(function(d){return <button key={d.v} className={dc===d.v?"on":""} title={d.l} onClick={function(){sDC(d.v)}}>{d.v}</button>})}
 <span style={{color:"var(--muted)"}}>{dc?(DC_LIST.find(function(d){return d.v===dc})||{}).l:"бросок без сложности"}</span>
 </div>
-{(inf.pen.dose||inf.pen.disease||inf.pen.will||inf.pen.shaken)?<div className="warnbox">{"Штрафы: "+[inf.pen.will?"Воля "+inf.pen.will:null,inf.pen.shaken?"потрясён "+inf.pen.shaken:null,inf.pen.dose?"Доза "+inf.pen.dose+" ко всем броскам":null,inf.pen.disease?"болезнь −1 к Телу и Реакции":null].filter(Boolean).join(" · ")}</div>:null}
+{(function(){var bad=diseaseList(c).map(function(d){return d.name+": "+d.text}).concat((c.crits||[]).map(function(x){return x.name+": "+x.text}));
+  var gen=[inf.pen.will?"Воля "+inf.pen.will+" ко всем броскам":null,inf.pen.shaken?"потрясён "+inf.pen.shaken:null,inf.pen.dose?"Доза "+inf.pen.dose+" ко всем броскам":null].filter(Boolean);
+  if(!gen.length&&!bad.length)return null;
+  return <div className="warnbox">{gen.length?<div>{"Штрафы: "+gen.join(" · ")}</div>:null}{bad.map(function(t,i){return <div key={i}>{t}</div>})}</div>})()}
 {c.locked&&!isGM&&pts>0&&<div className="okbox">{"Очки навыков за уровень: "+pts+" — трать кнопками «+» у навыков. Навык ×2 стоит 2 очка."}</div>}
 {isGM&&<div className="hint">Мастер правит числа свободно.</div>}
 {draft&&<div className={stLeft===0&&skLeft===0?"okbox":"warnbox"}>{"Создание: характеристики — осталось "+stLeft+" из "+STAT_POINTS+" · навыки — осталось "+skLeft+" из "+SKILL_POINTS+". Распредели и нажми «Принять»."}</div>}

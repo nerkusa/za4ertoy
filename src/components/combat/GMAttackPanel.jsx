@@ -1,10 +1,7 @@
 import React from 'react';
 import { db, ref, set, update, remove } from '../../firebase';
 import { ZONES, zoneByName } from '../../data/combat';
-import { cF, mHP } from '../../utils/character';
-import { calcAE } from '../../utils/combat';
-import { armorEffectivenessOf } from '../../data/traits';
-import { getTraits } from '../../utils/traitStore';
+import { resolvePlayerHit } from '../../utils/hits';
 import { r1, rN, sm } from '../../utils/dice';
 import PlayerAttackNotif from './PlayerAttackNotif';
 
@@ -35,37 +32,14 @@ function GMAttackPanel(pr){
     var dice=rN(parseInt(m[1]),parseInt(m[2]));
     var critM=atk.atkCrit?1.5:1;
     var rawDmg=Math.floor((sm(dice)+(atk.dmgBonus||0))*critM);
-    var multiplied=Math.floor(rawDmg*zoneObj.mult);
-    var pArmorId=zoneObj.slot==="head"?tgtChar.equippedHead:tgtChar.equippedBody;
-    var pArmorObj=(tgtChar.armors||[]).find(function(a){return a.id===pArmorId;});
-    var pArmorType=pArmorObj?(pArmorObj.hp>0?pArmorObj.type:"none"):"none";
-    var ae=zoneObj.ignoreArmor?{ad:0,hd:multiplied,desc:"мимо брони: "+zoneObj.name+"×"+zoneObj.mult+" игнор→HP−"+multiplied}:calcAE(pArmorType,atk.dmgType||"Р",multiplied);
-    /* Черты (напр. «Однорукий») могут снижать эффективность брони носителя */
-    var armorEff=armorEffectivenessOf(tgtChar,getTraits());
-    if(!zoneObj.ignoreArmor&&armorEff<1&&ae.ad>0){
-      var reducedAd=Math.floor(ae.ad*armorEff);var lostAd=ae.ad-reducedAd;
-      ae=Object.assign({},ae,{ad:reducedAd,hd:ae.hd+lostAd,desc:ae.desc+" (броня слабее ×"+armorEff.toFixed(2)+")"});
-    }
-    /* Щит — поглощает часть HP урона */
-    var shieldDesc="";var shieldDmg=0;
-    if(atk.shieldUsed&&atk.shieldAbsorb){
-      var absorbed=Math.floor(ae.hd*atk.shieldAbsorb);
-      shieldDmg=absorbed;ae.hd=Math.max(0,ae.hd-absorbed);
-      shieldDesc=" "+atk.shieldName+" поглотил "+absorbed;
-      /* HP щита обновится ниже через shields[] */
-    }
-    var inf2=cF(tgtChar);var pMx=tgtChar.hpOv||mHP(inf2.fs,tgtChar);
-    var pCur=tgtChar.curHp!==null&&tgtChar.curHp!==undefined?tgtChar.curHp:pMx;
-    var newHp=Math.max(0,pCur-ae.hd);
-    /* Пишем только изменённые поля персонажа, чтобы не затирать
-       параллельные правки листа игроком (гонка данных). */
-    var patch={curHp:newHp};
-    if(atk.shieldUsed&&atk.shieldId){patch.shields=(tgtChar.shields||[]).map(function(s){return s.id===atk.shieldId?Object.assign({},s,{hp:Math.max(0,s.hp-shieldDmg)}):s;});if(patch.shields.find(function(s){return s.id===atk.shieldId&&s.hp<=0}))patch.equippedShield=null;}
-    if(pArmorObj&&ae.ad>0){patch.armors=(tgtChar.armors||[]).map(function(a){return a.id===pArmorId?Object.assign({},a,{hp:Math.max(0,a.hp-ae.ad)}):a;});}
-    update(ref(db,"rooms/"+pr.room+"/characters/"+tgtChar._fbId),patch);
-    if(ae.hd>0){set(ref(db,"rooms/"+pr.room+"/dmgEvents/"+tgtChar._fbId),{attackerName:atk.attackerName,dmg:ae.hd,oldHp:pCur,newHp:newHp,maxHp:pMx,ts:Date.now()});}
-    addLog({who:atk.attackerName,type:"dmg_npc",label:""+atk.weaponName+" → "+atk.targetName+" ["+zoneObj.e+zoneObj.name+"] "+ae.hd+" HP"+shieldDesc,detail:zoneRoll+" "+zoneObj.name+" | "+ae.desc+" | Здоровье "+pCur+"→"+newHp,total:ae.hd});
-    onRoll({label:atk.attackerName+" Урон",d10:null,parts:[{label:atk.dmgDice||"1d6",value:sm(dice)},{label:"Бнс",value:atk.dmgBonus||0}],total:rawDmg,subtext:zoneObj.e+" "+zoneObj.name+" ×"+zoneObj.mult+(zoneObj.ignoreArmor?" (мимо брони)":"")+"\n"+ae.desc+shieldDesc+"\n→ "+atk.targetName+": "+pCur+"→"+newHp+" HP"});
+    /* Зона, броня, щит, железо и крит — одной функцией (utils/hits) */
+    var shield=atk.shieldUsed&&atk.shieldAbsorb?{absorb:atk.shieldAbsorb,name:atk.shieldName,id:atk.shieldId}:null;
+    var h=resolvePlayerHit(tgtChar,rawDmg,atk.dmgType||"Р",zoneObj,shield);
+    update(ref(db,"rooms/"+pr.room+"/characters/"+tgtChar._fbId),h.patch);
+    if(h.hd>0){set(ref(db,"rooms/"+pr.room+"/dmgEvents/"+tgtChar._fbId),{attackerName:atk.attackerName,dmg:h.hd,oldHp:h.oldHp,newHp:h.newHp,maxHp:h.maxHp,crit:h.crit?h.crit.label:"",ts:Date.now()});}
+    addLog({who:atk.attackerName,type:"dmg_npc",label:atk.weaponName+" → "+atk.targetName+" ["+zoneObj.name+"] "+h.hd+" Здоровья",detail:zoneRoll+" | "+h.desc+" | Здоровье "+h.oldHp+"→"+h.newHp,total:h.hd});
+    if(h.crit)setTimeout(function(){addLog({who:atk.targetName,type:"crit",label:h.crit.label,detail:"удар на "+h.hd+" Здоровья",total:0})},5);
+    onRoll({label:atk.attackerName+" Урон",d10:null,parts:[{label:atk.dmgDice||"1d6",value:sm(dice)},{label:"Бнс",value:atk.dmgBonus||0}],total:rawDmg,subtext:zoneObj.name+" ×"+h.mult+(zoneObj.ignoreArmor?" (мимо брони)":"")+"\n"+h.desc+"\n→ "+atk.targetName+": "+h.oldHp+"→"+h.newHp+(h.crit?"\n"+h.crit.label:"")});
     remove(ref(db,"rooms/"+pr.room+"/pendingAttacks/"+id));
   }
   function skipDmg(){remove(ref(db,"rooms/"+pr.room+"/pendingAttacks/"+id));}

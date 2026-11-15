@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
-import { db, ref, set } from '../../firebase';
+import { db, ref, set, update } from '../../firebase';
+import { resolvePlayerHit, npcZoneMult, npcRaw, npcCritPatch } from '../../utils/hits';
+import { npcCritPen } from '../../utils/crits';
 import { ARMOR_T, SHIELD_T, ZONES, aimPen } from '../../data/combat';
 import { DT, SD, SKD, WT, skLabel, NPC_SK, npcAtk, stName, stShort, wtLabel } from '../../data/stats';
 import { S } from '../../styles/ui';
@@ -81,7 +83,8 @@ function despawn(id){var sp=Object.assign({},spawned);delete sp[id];pr.saveSpawn
 function updateSpawned(id,data){var sp=Object.assign({},spawned);sp[id]=data;pr.saveSpawned(sp)}
 /* Текущая Воля NPC (по умолчанию = базовый стат, если ещё не тратилась) и штраф = самой отрицательной Воле при уходе в минус */
 function npcCurWill(s){return s.curWill!=null?s.curWill:((s.stats||{}).volya||0)}
-function npcWillPen(s){return willPenalty(npcCurWill(s))}
+/* Штраф NPC: отрицательная Воля плюс статусы критов (контузия и т. п.) */
+function npcWillPen(s){return willPenalty(npcCurWill(s))+npcCritPen(s,"all")}
 function rollInitiative(){
   var list=[];
   (pr.characters||[]).filter(function(x){return x.active}).forEach(function(pc){var inf=cF(pc);var rv=inf.fs.reak||0;var R=rollHit();list.push({id:pc._fbId,name:pc.name||"?",kind:"player",init:R.d+rv})});
@@ -96,26 +99,13 @@ function endCombat(){if(pr.saveInitiative)pr.saveInitiative(null);(pr.characters
 
 /* Применить урон к игроку (с учётом брони и зоны) */
 function applyDmgToPlayer(ptgt,rawDmg,dmgType,zoneName,who){
-  var inf2=cF(ptgt);var fs2=inf2.fs;
-  var pMx=ptgt.hpOv||mHP(fs2,ptgt);
-  var pCur=ptgt.curHp!==null&&ptgt.curHp!==undefined?ptgt.curHp:pMx;
   var pZone=ZONES.find(function(x){return x.name===zoneName})||ZONES[2];
-  var multiplied=Math.floor(rawDmg*pZone.mult);
-  var pArmorId=pZone.slot==="head"?ptgt.equippedHead:ptgt.equippedBody;
-  var pArmorObj=(ptgt.armors||[]).find(function(a){return a.id===pArmorId});
-  var pArmorType=pArmorObj?(pArmorObj.hp>0?pArmorObj.type:"none"):"none";
-  var ae=pZone.ignoreArmor?{ad:0,hd:multiplied,desc:"мимо брони: "+pZone.name+" ×"+pZone.mult+" игнор брони → HP−"+multiplied}:calcAE(pArmorType,dmgType,multiplied);
-  var newPHp=Math.max(0,pCur-ae.hd);
-  var updP=Object.assign({},ptgt,{curHp:newPHp});
-  if(pArmorObj&&ae.ad>0){
-    var newArmHp=Math.max(0,pArmorObj.hp-ae.ad);
-    updP.armors=(ptgt.armors||[]).map(function(a){return a.id===pArmorId?Object.assign({},a,{hp:newArmHp}):a});
-  }
-  delete updP._fbId;
-  set(ref(db,"rooms/"+pr.roomCode+"/characters/"+ptgt._fbId),updP);
-  pr.addLog({who:who,type:"dmg_npc",label:""+ptgt.name+" ["+pZone.e+pZone.name+"] "+dmgType,detail:ae.desc+(ae.ad>0?" | бр: "+(pArmorObj?pArmorObj.hp:0)+"→"+Math.max(0,(pArmorObj?pArmorObj.hp:0)-ae.ad):"")+" | Здоровье "+pCur+"→"+newPHp,total:ae.hd});
-  /* Записываем событие урона в Firebase чтобы игрок увидел попап */
-  if(ae.hd>0){set(ref(db,"rooms/"+pr.roomCode+"/dmgEvents/"+ptgt._fbId),{attackerName:who,dmg:ae.hd,oldHp:pCur,newHp:newPHp,maxHp:pMx,ts:Date.now()});}
+  var h=resolvePlayerHit(ptgt,rawDmg,dmgType,pZone,null);
+  update(ref(db,"rooms/"+pr.roomCode+"/characters/"+ptgt._fbId),h.patch);
+  pr.addLog({who:who,type:"dmg_npc",label:ptgt.name+" ["+pZone.name+"] "+dmgType+" · "+h.hd+" Здоровья",detail:h.desc+" | Здоровье "+h.oldHp+"→"+h.newHp,total:h.hd});
+  if(h.crit)setTimeout(function(){pr.addLog({who:ptgt.name,type:"crit",label:h.crit.label,detail:"удар на "+h.hd+" Здоровья",total:0})},5);
+  /* Событие урона — игрок увидит попап */
+  if(h.hd>0){set(ref(db,"rooms/"+pr.roomCode+"/dmgEvents/"+ptgt._fbId),{attackerName:who,dmg:h.hd,oldHp:h.oldHp,newHp:h.newHp,maxHp:h.maxHp,crit:h.crit?h.crit.label:"",ts:Date.now()});}
 }
 
 /* NPC: бросок на попадание */
@@ -123,7 +113,7 @@ function npcAttack(s,w){
   var st=s.stats||{};var sk=s.skills||{};
   var na=npcAtk(st,sk,w);var rv=na.rv,skVal=na.skVal,skNm=na.skNm,atName=na.atName;
   var wp=npcWillPen(s);
-  var R=rollHit();var d=R.d;var aimP=(npcAim&&playerTgtId)?aimPen(playerZone):0;var t=d+rv+skVal+(w.bonus||0)-aimP+wp;
+  var R=rollHit();var d=R.d;var aimP=(npcAim&&playerTgtId)?aimPen(playerZone):0;wp+=npcCritPen(s,"attack");var t=d+rv+skVal+(w.bonus||0)-aimP+wp;
   var tgtChar=playerTgtId?playerChars.find(function(x){return x._fbId===playerTgtId}):null;
   var tgtName=tgtChar?tgtChar.name:"";
   pr.addLog({who:s.name,type:"hit",label:""+w.name+(tgtName?" → "+tgtName:"")+(aimP?" "+playerZone+"(−"+aimP+")":"")+(R.crit?" крит":R.fumble?" срыв":""),detail:"d10("+d+")"+" + "+atName+"("+rv+") + "+skNm+"("+skVal+") + бонус("+(w.bonus||0)+")"+(aimP?" − прицел("+aimP+")":"")+(wp?" − деморализован("+Math.abs(wp)+")":"")+" = "+t,total:t});
@@ -181,7 +171,7 @@ function npcVsNpc(s,w){
   var tst=tgt.stats||{};var tsk=tgt.skills||{};var D=rollHit();var dodge=D.d+(tst.reak||0)+(tsk.dodge||0)+npcWillPen(tgt);
   if(dodge>=hit){pr.addLog({who:s.name,type:"dodge",label:""+s.name+" → "+tgt.name+": промах (уклон "+dodge+" ≥ "+hit+")",detail:"",total:hit});sRollP({label:s.name+" → "+tgt.name,d10:R.d,crit:R.crit,fumble:R.fumble,parts:[{label:atName,value:rv},{label:"нав",value:skVal}],total:hit,subtext:"Уклонился ("+dodge+")"});return;}
   var m=(w.dice||"1d6").match(/(\d+)d(\d+)/);var dice=m?rN(parseInt(m[1]),parseInt(m[2])):[r1(6)];
-  var zoneD=r1(6);var zoneObj=ZONES[zoneD-1];var crit=R.crit?1.5:1;var rawDmg=Math.floor((sm(dice)+(w.bonus||0))*crit);var mult=Math.floor(rawDmg*zoneObj.mult);
+  var zoneD=r1(6);var zoneObj=ZONES[zoneD-1];var crit=R.crit?1.5:1;var rawDmg=Math.floor((sm(dice)+(w.bonus||0))*crit);var mult=Math.floor(npcRaw(tgt,rawDmg,w.dmgType)*npcZoneMult(tgt,zoneObj));
   var at=zoneObj.slot==="head"?(tgt.armorHead||"none"):(tgt.armorBody||"none");var ahp=zoneObj.slot==="head"?(tgt.armorHeadHp||0):(tgt.armorBodyHp||0);if(ahp<=0)at="none";
   var ae=zoneObj.ignoreArmor?{ad:0,hd:mult,desc:"мимо брони: "+zoneObj.name}:calcAE(at,w.dmgType||"Р",mult);
   var shieldDmg=0,shieldDesc="";
@@ -189,6 +179,7 @@ function npcVsNpc(s,w){
   var newHp=Math.max(0,(tgt.hp||0)-ae.hd);var upd=Object.assign({},tgt,{hp:newHp});
   if(shieldDmg>0)upd.shieldHp=Math.max(0,(tgt.shieldHp||0)-shieldDmg);
   if(ae.ad>0){if(zoneObj.slot==="head")upd.armorHeadHp=Math.max(0,(tgt.armorHeadHp||0)-ae.ad);else upd.armorBodyHp=Math.max(0,(tgt.armorBodyHp||0)-ae.ad);}
+  var _cr=npcCritPatch(tgt,zoneObj.name,ae.hd);Object.assign(upd,_cr.patch);if(_cr.label)setTimeout(function(){pr.addLog({who:s.name,type:"crit",label:tgt.name+": "+_cr.label,detail:"удар на "+ae.hd+" Здоровья",total:0})},5);
   updateSpawned(npcTgtId,upd);
   pr.addLog({who:s.name,type:"dmg",label:""+s.name+" → "+tgt.name+" ["+zoneObj.e+zoneObj.name+"] "+ae.hd+" HP"+(R.crit?" · крит":""),detail:hit+" vs "+dodge+" | "+ae.desc+shieldDesc+" | Здоровье "+(tgt.hp||0)+"→"+newHp,total:ae.hd});
   sRollP({label:s.name+" → "+tgt.name,d10:R.d,crit:R.crit,fumble:R.fumble,parts:[{label:atName,value:rv},{label:"нав",value:skVal}],total:hit,subtext:""+ae.hd+" урона ("+zoneObj.name+")\nЗдоровье "+(tgt.hp||0)+"→"+newHp});
@@ -245,6 +236,7 @@ return <div key={id} style={{background:"#e2d8c3",border:"1px solid #c6bba3",bor
 {s.armorBody&&s.armorBody!=="none"&&<div style={{fontSize:10,color:"#6a6052"}}>{s.armorBodyName||(ARMOR_T.find(function(a){return a.id===s.armorBody})||{}).name||s.armorBody} {s.armorBodyHp||0}/{s.armorBodyMaxHp||0}</div>}
 {s.shieldType&&s.shieldType!=="none"&&<div style={{fontSize:10,color:"#6a6052"}}>{s.shieldName||(SHIELD_T.find(function(t){return t.id===s.shieldType})||{}).name||s.shieldType} {s.shieldHp||0}/{s.shieldMaxHp||0}</div>}
 <div style={{fontSize:10,color:npcCurWill(s)<0?"#8a3b22":"#6a6052",fontWeight:npcCurWill(s)<0?700:400}}>Воля {npcCurWill(s)}/{(s.stats||{}).volya||0}{npcCurWill(s)<0?" ("+npcWillPen(s)+" ко всем броскам)":""}</div>
+{(s.crits||[]).length>0&&<div style={{display:"flex",gap:3,marginTop:2,flexWrap:"wrap",alignItems:"center"}}>{(s.crits||[]).map(function(x){return <span key={x.id} title={x.text} style={{fontSize:10,fontWeight:700,color:"#8a3b22",border:"1px solid #8a3b22",padding:"1px 5px"}}>{x.name+(x.roundsLeft?" · "+x.roundsLeft+" р.":"")}<button onClick={function(){updateSpawned(id,Object.assign({},s,{crits:(s.crits||[]).filter(function(k){return k.id!==x.id})}))}} style={{border:"none",background:"none",color:"#8a3b22",padding:"0 0 0 4px",cursor:"pointer"}}>✕</button></span>})}</div>}
 {(s.broken||s.shakenPenalty>0)&&<div style={{display:"flex",gap:3,marginTop:2,flexWrap:"wrap",alignItems:"center"}}>
 {s.broken&&<span style={{fontSize:10,fontWeight:700,color:"#8a3b22",background:"#efe2d6",borderRadius:0,padding:"1px 5px"}}>Сломлен</span>}
 {s.shakenPenalty>0&&<span style={{fontSize:10,fontWeight:700,color:"#8a6200",background:"#f0e2b8",borderRadius:0,padding:"1px 5px"}}>{"Потрясён −"+s.shakenPenalty}</span>}

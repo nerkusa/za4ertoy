@@ -3,7 +3,9 @@ import { getProfs } from '../../utils/profStore';
 import { getTraits } from '../../utils/traitStore';
 import { cF, hpOf, willOf, xpProgress, levelUpReward } from '../../utils/character';
 import { originOf } from '../../data/professions';
-import { BRACELETS, DISEASES, IRON_STAGES, IMPRINT_STAGES, CASS_KINDS, kindName, doseState } from '../../data/gear';
+import { BRACELETS, DISEASES, IRON_STAGES, IMPRINT_STAGES, CASS_KINDS, kindName, doseState, diseaseList, diseaseByKey } from '../../data/gear';
+import { critsAfterRest } from '../../utils/crits';
+import CritsCard from '../CritsCard';
 import { findBy, nestInfo, solutionList, ironSteps } from '../../data/traits';
 import { grantPatch, grantLabel } from '../../utils/grant';
 import { fmtMoney, priceNum } from '../../utils/currency';
@@ -74,9 +76,9 @@ function PartyCard(pr) {
   const xpp = xpProgress(c);
   const [xg, setXg] = useState('');
   const [mg, setMg] = useState('');
-  const [nd, setNd] = useState(DISEASES[0]);
+  const [nd, setNd] = useState(DISEASES[0].key);
   const [more, setMore] = useState(false);
-  const dose = c.dose || 0; const dis = c.diseases || []; const steps = ironSteps(c, cat);
+  const dose = c.dose || 0; const dis = diseaseList(c); const steps = ironSteps(c, cat);
   const ni = nestInfo(c, cat); const b = c.bracelet && BRACELETS[c.bracelet.model];
   const inNest = (c.cassettes || []).filter(function (x) { return x.inNest; });
   const stage = IRON_STAGES.filter(function (s) { return steps >= s.at; }).pop();
@@ -94,7 +96,8 @@ function PartyCard(pr) {
   function rest() {
     const noHeal = dose >= 4;
     if (noHeal && !window.confirm((c.name || '?') + ': Доза ' + dose + ' — по правилам Здоровье не восстанавливается. Восстановить только Волю?')) return;
-    save({ curHp: noHeal ? hp.cur : hp.max, curWill: w.max, shakenPenalty: 0, broken: false, depoCharge: 1, combatDepoUsed: false, cassettes: (c.cassettes || []).map(function (x) { return x.stuck ? Object.assign({}, x, { stuck: false }) : x; }) });
+    const half = dis.some(function (d) { return d.flags.restHalf; });
+    save({ curHp: noHeal ? hp.cur : (half ? Math.min(hp.max, hp.cur + Math.floor((hp.max - hp.cur) / 2)) : hp.max), curWill: w.max, shakenPenalty: 0, broken: false, depoCharge: 1, combatDepoUsed: false, crits: critsAfterRest(c), cassettes: (c.cassettes || []).map(function (x) { return x.stuck ? Object.assign({}, x, { stuck: false }) : x; }) });
     log('Отдых', c.name + (noHeal ? ' (Доза 4+: без Здоровья)' : ''));
   }
   function adjHp(d) { save({ curHp: Math.max(0, Math.min(hp.max, hp.cur + d)) }); log(d < 0 ? 'Урон' : 'Лечение', c.name + ': ' + (d > 0 ? '+' : '') + d + ' Здоровья'); }
@@ -121,7 +124,7 @@ function PartyCard(pr) {
         <dl className="kv">
           <dt>Воля</dt><dd>{w.cur + ' / ' + w.max}</dd>
           <dt>Доза</dt><dd>{dose + ' / 10' + (doseState(dose) ? ' · ' + doseState(dose) : '')}</dd>
-          <dt>Болезни</dt><dd>{dis.length ? dis.join(', ') : '—'}</dd>
+          <dt>Болезни</dt><dd>{dis.length ? dis.map(function (d) { return d.name + ' (' + d.cure + ')'; }).join(', ') : '—'}</dd>
           <dt>Деньги</dt><dd>{fmtMoney(c.money || 0)}</dd>
           <dt>Молва</dt><dd>{(c.molva > 0 ? '+' : '') + (c.molva || 0)}</dd>
           <dt>Опыт</dt><dd>{xpp.got + '/' + xpp.need + ' до ур.' + (xpp.level + 1) + (xpp.ready ? ' · готов' : '') + ' · награда: +1 очко навыка и +2 Здоровья'}</dd>
@@ -144,13 +147,14 @@ function PartyCard(pr) {
           <button className="btn sm" onClick={function () { setMore(!more); }}>{more ? 'Свернуть' : 'Ещё'}</button>
         </div>
         {more && <div className="row">
-          <select value={nd} onChange={function (e) { setNd(e.target.value); }}>{DISEASES.map(function (d) { return <option key={d} value={d}>{d}</option>; })}</select>
-          <button className="btn sm" onClick={function () { if (dis.indexOf(nd) < 0) { save({ diseases: dis.concat([nd]) }); log('Болезнь', c.name + ': ' + nd); } }}>Заразить</button>
-          {dis.map(function (d) { return <button key={d} className="btn sm" onClick={function () { save({ diseases: dis.filter(function (x) { return x !== d; }) }); log('Снял болезнь', c.name + ': ' + d); }}>{'Снять: ' + d}</button>; })}
+          <select value={nd} onChange={function (e) { setNd(e.target.value); }}>{DISEASES.map(function (d) { return <option key={d.key} value={d.key}>{d.name}</option>; })}</select>
+          <button className="btn sm" onClick={function () { const d = diseaseByKey(nd); if (d && !dis.some(function (x) { return x.key === d.key; })) { save({ diseases: dis.map(function (x) { return { key: x.key, name: x.name }; }).concat([{ key: d.key, name: d.name }]) }); log('Болезнь', c.name + ': ' + d.name); } }}>Заразить</button>
+          {dis.map(function (d) { return <button key={d.key} className="btn sm" onClick={function () { save({ diseases: dis.filter(function (x) { return x.key !== d.key; }).map(function (x) { return { key: x.key, name: x.name }; }) }); log('Снял болезнь', c.name + ': ' + d.name); }}>{'Снять: ' + d.name}</button>; })}
           <button className="btn sm" onClick={function () { save({ molva: Math.max(-5, (c.molva || 0) - 1) }); }}>Молва −</button>
           <button className="btn sm" onClick={function () { save({ molva: Math.min(5, (c.molva || 0) + 1) }); }}>Молва +</button>
           <button className="btn sm" style={{ borderColor: 'var(--rust)', color: 'var(--rust)' }} onClick={del}>Удалить</button>
         </div>}
+        <CritsCard char={c} save={function (d) { pr.saveChar(c._fbId, d); }} isGM={true} addLog={pr.addLog} />
         <GrantBox char={c} shop={pr.shop} saveChar={pr.saveChar} addLog={pr.addLog} log={log} />
       </div>
     </div>
@@ -166,9 +170,24 @@ function Overview(pr) {
     if (!window.confirm('Отдых всему отряду (' + pr.characters.length + '): Здоровье и Воля восстанавливаются.' + (dosed.length ? '\nДоза 4+ — Здоровье не восстановится у: ' + dosed.map(function (c) { return c.name || '?'; }).join(', ') + '.' : ''))) return;
     pr.characters.forEach(function (c) {
       const fs = cF(c).fs; const hp = hpOf(c, fs); const w = willOf(c, fs);
-      pr.saveChar(c._fbId, Object.assign({}, c, { curHp: (c.dose || 0) >= 4 ? hp.cur : hp.max, curWill: w.max, shakenPenalty: 0, broken: false, depoCharge: 1, combatDepoUsed: false }));
+      const half = diseaseList(c).some(function (d) { return d.flags.restHalf; });
+      pr.saveChar(c._fbId, Object.assign({}, c, { curHp: (c.dose || 0) >= 4 ? hp.cur : (half ? Math.min(hp.max, hp.cur + Math.floor((hp.max - hp.cur) / 2)) : hp.max), curWill: w.max, shakenPenalty: 0, broken: false, depoCharge: 1, combatDepoUsed: false, crits: critsAfterRest(c) }));
     });
     if (pr.addGmLog) pr.addGmLog({ who: pr.myName || 'ГМ', label: 'Отдых всего отряда', detail: pr.characters.map(function (c) { return c.name || '?'; }).join(', ') });
+  }
+  /* Новый день: ежедневные потери от болезней (Сибирка, Гниль — Здоровье, Ожерелье — Воля) */
+  function newDay() {
+    const hit = [];
+    pr.characters.forEach(function (c) {
+      const ds = diseaseList(c); let dh = 0, dw = 0;
+      ds.forEach(function (d) { dh += d.flags.dailyHp || 0; dw += d.flags.dailyWill || 0; });
+      if (!dh && !dw) return;
+      const fs = cF(c).fs; const hp = hpOf(c, fs); const w = willOf(c, fs);
+      pr.saveChar(c._fbId, Object.assign({}, c, { curHp: Math.max(0, hp.cur + dh), curWill: w.cur + dw }));
+      hit.push((c.name || '?') + (dh ? ' ' + dh + ' Здоровья' : '') + (dw ? ' ' + dw + ' Воли' : ''));
+    });
+    if (pr.addGmLog) pr.addGmLog({ who: pr.myName || 'ГМ', label: 'Новый день', detail: hit.length ? hit.join('; ') : 'болезни никого не тронули' });
+    if (!hit.length) alert('Новый день: ежедневных потерь от болезней ни у кого нет.');
   }
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -176,6 +195,7 @@ function Overview(pr) {
       <div className="row">
         <input value={q} onChange={function (e) { setQ(e.target.value); }} placeholder="Поиск игрока по имени…" className="n-input" style={{ flex: '1 1 200px' }} />
         <button className="btn" onClick={restAll} disabled={pr.characters.length === 0}>Отдых всего отряда</button>
+        <button className="btn" onClick={newDay} disabled={pr.characters.length === 0} title="Сибирка и Гниль: −1 Здоровья, Ожерелье: −1 Воли">Новый день</button>
       </div>
       <GMRoll addLog={pr.addLog} />
       {pr.characters.length === 0 && <p className="hint">Ждём игроков: они появятся здесь после регистрации.</p>}

@@ -16,8 +16,10 @@ function gE(b,bo){var r=Object.assign({},b);Object.entries(bo||{}).forEach(funct
 
 /* Штраф Дозы ко всем броскам: 4–6 → −1, 7+ → −2 */
 function dosePenalty(dose){dose=dose||0;if(dose>=7)return -2;if(dose>=4)return -1;return 0}
-/* Любая болезнь: −1 к броскам от Тела и Реакции */
-function diseasePenalty(c,statKey){return ((c&&c.diseases)||[]).length>0&&(statKey==="telo"||statKey==="reak")?-1:0}
+/* Штраф болезней и статусов к броску от характеристики statKey:
+   all_roll — ко всем броскам, stat_roll — к броскам от этой характеристики.
+   (Общего «−1 за любую болезнь» больше нет: у каждой болезни свои эффекты.) */
+function diseasePenalty(c,statKey){return activeTraitEffects(c,getTraits()).reduce(function(a,e){if(e.type==="all_roll")return a+(e.amount||0);if(e.type==="stat_roll"&&e.stat===statKey)return a+(e.amount||0);return a},0)}
 /* Постоянный эффект отрицательной Воли: пока текущая Воля < 0 — штраф ко
    всем броскам, равный самой отрицательной Воле. */
 function willPenalty(curWill){return curWill<0?curWill:0}
@@ -54,13 +56,15 @@ function cF(c){
   var ap=armorPenaltyOf(c,es);if(ap.dodge)eSk["Уклонение"]=(eSk["Уклонение"]||0)+ap.dodge;
   var mxW=c.willOv||es.volya||1;
   var curW=c.curWill!==null&&c.curWill!==undefined?c.curWill:mxW;
-  var pen={will:willPenalty(curW),shaken:c.shakenPenalty?-c.shakenPenalty:0,dose:dosePenalty(c.dose),disease:((c.diseases||[]).length>0)?-1:0};
+  function effPen(statKey){return effs.reduce(function(a,e){if(e.type==="all_roll")return a+(e.amount||0);if(e.type==="stat_roll"&&e.stat===statKey)return a+(e.amount||0);return a},0)}
+  var pen={will:willPenalty(curW),shaken:c.shakenPenalty?-c.shakenPenalty:0,dose:dosePenalty(c.dose),disease:0,of:effPen,
+    attack:effs.reduce(function(a,e){return a+(e.type==="attack_bonus"?(e.amount||0):0)},0),aim:effs.reduce(function(a,e){return a+(e.type==="aim_pen"?(e.amount||0):0)},0)};
   function rollPen(statKey){
     var parts=[];
     if(pen.will)parts.push({label:"Воля",value:pen.will});
     if(pen.shaken)parts.push({label:"Потрясён",value:pen.shaken});
     if(pen.dose)parts.push({label:"Доза",value:pen.dose});
-    var dp=diseasePenalty(c,statKey);if(dp)parts.push({label:"Болезнь",value:dp});
+    var dp=effPen(statKey);if(dp)parts.push({label:"Болезни и раны",value:dp});
     return{total:parts.reduce(function(a,p){return a+p.value},0),parts:parts};
   }
   return{race:null,fs:es,eSk:eSk,effects:effs,src:src,pen:pen,rollPen:rollPen}}
@@ -82,7 +86,7 @@ function nC(name){return{name:name||"",level:1,xp:0,portrait:"",bio:"",locked:fa
   weapons:[],armors:[],equippedHead:null,equippedBody:null,shield:null,shieldHp:0,shieldMaxHp:0,equippedWeapon:null,weaponMode:"1h",
   inventory:[],shakenPenalty:0,broken:false,
   stats:iS(),skills:iSk(),skillPts:0,money:0,profession:"none",origin:"post",
-  dose:0,diseases:[],combatDepoUsed:false,depoCharge:1,
+  dose:0,diseases:[],crits:[],combatDepoUsed:false,depoCharge:1,
   bracelet:null,cassettes:[],solutions:{arm:null,leg:null,implants:[],addons:[]},molva:0}}
 
 /* Опыт до следующего уровня растёт на 100 за уровень. xpForLevel(N) —

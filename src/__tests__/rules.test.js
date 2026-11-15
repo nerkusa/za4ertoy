@@ -120,13 +120,13 @@ describe('штрафы Дозы и болезни', function(){
   test('Доза 4–6: −1, 7–9: −2', function(){
     expect(dosePenalty(0)).toBe(0);expect(dosePenalty(3)).toBe(0);expect(dosePenalty(4)).toBe(-1);expect(dosePenalty(6)).toBe(-1);expect(dosePenalty(7)).toBe(-2);expect(dosePenalty(9)).toBe(-2);
   });
-  test('болезнь: −1 только к броскам от Тела и Реакции', function(){
-    var c=ch({diseases:["Цинга"]});
-    expect(diseasePenalty(c,"telo")).toBe(-1);expect(diseasePenalty(c,"reak")).toBe(-1);expect(diseasePenalty(c,"razum")).toBe(0);expect(diseasePenalty(ch({}),"telo")).toBe(0);
+  test('болезнь: штраф по её эффектам, а не общий −1', function(){
+    var c=ch({diseases:[{key:"bolotnaya"}]});
+    expect(diseasePenalty(c,"telo")).toBe(-2);expect(diseasePenalty(c,"reak")).toBe(0);expect(diseasePenalty(ch({}),"telo")).toBe(0);
   });
   test('общий rollPen складывает Дозу, болезнь, Волю и потрясение', function(){
-    var c=ch({dose:7,diseases:["Клещ"],shakenPenalty:2,curWill:-1});var inf=cF(c);
-    expect(inf.rollPen("telo").total).toBe(-2-1-2-1);expect(inf.rollPen("har").total).toBe(-2-2-1);
+    var c=ch({dose:7,diseases:[{key:"goryachka"}],shakenPenalty:2,curWill:-1});var inf=cF(c);
+    expect(inf.rollPen("telo").total).toBe(-2-1-2-2);expect(inf.rollPen("har").total).toBe(-2-1-2-2);
   });
 });
 
@@ -258,4 +258,69 @@ describe('создание v3', function(){
     for(var i=0;i<20;i++){var r=CH.rndCore(PROFS[2],"pre");expect(CH.statSpent(r.stats,"pre")).toBe(15);expect(r.stats.telo).toBeLessThanOrEqual(7);
       var s=CH.skillSpent(r.skills);expect(s).toBeLessThanOrEqual(15);expect(s).toBeGreaterThanOrEqual(14)}
   });
+});
+
+describe('криты', function(){
+  var K=require('../utils/crits');var H=require('../utils/hits');var CB=require('../data/combat');var CH=require('../utils/character');
+  var Z=function(n){return CB.zoneByName(n)};
+  function pc(o){return Object.assign(CH.nC("Гайка"),{hpRoll:10,stats:{telo:8,reak:8,vosp:3,razum:3,har:3,volya:3}},o||{})}
+  test('меньше 10 — не крит, 10–14 и 15+ по зонам', function(){
+    expect(K.critOutcome(pc(),"Голова",9)).toBeNull();
+    expect(K.critOutcome(pc(),"Голова",10).status.key).toBe("contusion");
+    var ko=K.critOutcome(pc(),"Голова",15,function(n){return n===6?4:1});expect(ko.status.key).toBe("ko");expect(ko.status.roundsLeft).toBe(4);
+    expect(K.critOutcome(pc(),"Шея",12).status.bleed).toBe(2);expect(K.critOutcome(pc(),"Шея",16).status.bleed).toBe(4);
+    expect(K.critOutcome(pc(),"Пах",11).status.skipLeft).toBe(1);expect(K.critOutcome(pc(),"Пах",20).status.skipLeft).toBe(2);
+    expect(K.critOutcome(pc(),"Торс",15).status.effects.some(function(e){return e.type==="attack_bonus"})).toBe(true);
+  });
+  test('вторая контузия — без сознания', function(){
+    var c=pc();c=Object.assign(c,K.critPatch(c,K.critOutcome(c,"Голова",10)));
+    expect(K.critOutcome(c,"Голова",11).status.key).toBe("ko");
+  });
+  test('удар 10+ в голову даёт контузию: −2 ко всем броскам, отдых снимает', function(){
+    var c=pc();var h=H.resolvePlayerHit(c,4,"П",Z("Голова"),null);
+    expect(h.hd).toBe(12);expect(h.crit.status.key).toBe("contusion");
+    var c2=Object.assign({},c,h.patch);expect(CH.cF(c2).rollPen("razum").total).toBe(-2);
+    expect(K.critsAfterRest(c2).length).toBe(0);
+  });
+  test('перелом руки роняет оружие; крит по железной руке ломает протез', function(){
+    var c=pc({equippedWeapon:"w1"});var h=H.resolvePlayerHit(c,12,"П",Z("Руки"),null,function(){return 2});
+    expect(h.crit.status.key).toBe("arm_fracture");expect(h.patch.equippedWeapon).toBeNull();
+    var iron=pc({prostheses:{armR:{grade:"new",tip:"kist",tips:["kist"],broken:false}}});
+    var h2=H.resolvePlayerHit(iron,12,"П",Z("Руки"),null,function(){return 2});
+    expect(h2.crit.kind).toBe("prosthesis");expect(h2.patch.prostheses.armR.broken).toBe(true);expect(h2.patch.crits).toBeUndefined();
+  });
+  test('щит и броня считаются до крита', function(){
+    var h=H.resolvePlayerHit(pc(),12,"П",Z("Торс"),{absorb:0.5,name:"Капот",id:"s"});expect(h.hd).toBe(6);expect(h.crit).toBeNull();
+  });
+  test('рёбра 15+ — штраф к атаке, перелом ноги — −3 к Уклонению', function(){
+    var c=Object.assign(pc(),{crits:[Object.assign({id:"a"},K.CRITS["Торс"].hi),Object.assign({id:"b"},K.CRITS["Ноги"].lo)]});
+    var inf=CH.cF(c);expect(inf.pen.attack).toBe(-2);expect(inf.eSk["Уклонение"]).toBe(-5);expect(inf.eSk["Атлетика"]).toBe(-2);
+    expect(K.bleedAmount(Object.assign(pc(),{crits:[Object.assign({id:"z"},K.CRITS["Шея"].hi)]}))).toBe(4);
+  });
+  test('NPC: крит пишется в npc.crits, железный NPC — голова ×1 и К/Р вдвое', function(){
+    var n={name:"Наёмник",hp:30,maxHp:30,armorBody:"none"};var r=H.npcCritPatch(n,"Голова",10);expect(r.patch.crits[0].key).toBe("contusion");
+    var lent={zoneMult:{"Голова":1},halfKR:true};expect(H.npcZoneMult(lent,Z("Голова"))).toBe(1);expect(H.npcZoneMult({},Z("Голова"))).toBe(3);
+    expect(H.npcRaw(lent,9,"К")).toBe(4);expect(H.npcRaw(lent,9,"П")).toBe(9);
+    expect(K.npcCritPen({crits:[Object.assign({id:"q"},K.CRITS["Голова"].lo)]},"all")).toBe(-2);
+  });
+});
+
+describe('болезни v3', function(){
+  var G=require('../data/gear');var CH=require('../utils/character');
+  function pc(dis){return Object.assign(CH.nC("x"),{hpRoll:5,stats:{telo:5,reak:5,vosp:5,razum:5,har:5,volya:5},diseases:dis})}
+  test('12 болезней-объектов из книги', function(){expect(G.DISEASES.length).toBe(12);G.DISEASES.forEach(function(d){expect(d.cure).toBeTruthy()})});
+  test('Клещ: −2 к Огнестрелу и Метанию на листе', function(){
+    var inf=CH.cF(pc([{key:"kleshch",name:"Клещ"}]));expect(inf.eSk["Огнестрел"]).toBe(-2);expect(inf.eSk["Метание"]).toBe(-2);expect(inf.eSk["Механика"]).toBe(-2);
+  });
+  test('старые строки понимаются', function(){expect(CH.cF(pc(["Клещ"])).eSk["Огнестрел"]).toBe(-2)});
+  test('болотная лихорадка — только броски от Тела; горячка — все', function(){
+    var b=CH.cF(pc([{key:"bolotnaya"}]));expect(b.rollPen("telo").total).toBe(-2);expect(b.rollPen("reak").total).toBe(0);
+    var g=CH.cF(pc([{key:"goryachka"}]));expect(g.rollPen("har").total).toBe(-2);
+  });
+  test('Лентец и Белая кровь режут максимум Здоровья', function(){
+    var c=pc([]);var base=CH.mHP(CH.cF(c).fs,c);
+    var l=pc([{key:"lentec"},{key:"belaya"}]);expect(CH.mHP(CH.cF(l).fs,l)).toBe(base-8);
+  });
+  test('Мутный глаз: −3 к Внимательности и +3 к штрафу прицела', function(){var i=CH.cF(pc([{key:"mutny"}]));expect(i.eSk["Внимательность"]).toBe(-3);expect(i.pen.aim).toBe(3)});
+  test('общего −1 за любую болезнь больше нет', function(){expect(CH.cF(pc([{key:"sibirka"}])).rollPen("telo").total).toBe(0)});
 });

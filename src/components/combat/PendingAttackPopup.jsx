@@ -25,13 +25,13 @@ function PendingAttackPopup(pr){
   var dodgeDetail=atk.dodgeDetail||"";
   var myCurWill=myChar.curWill!==null&&myChar.curWill!==undefined?myChar.curWill:(fs.volya||1);
   var wPen=willPenalty(myCurWill);var sPen=myChar.shakenPenalty?-myChar.shakenPenalty:0;
-  var rPen=wPen+sPen+inf.pen.dose;var physPen=rPen+inf.pen.disease;
+  var rPen=wPen+sPen+inf.pen.dose;var physPen=rPen+inf.pen.of("reak");
   function clearShakenPatch(patch){if(myChar.shakenPenalty)patch.shakenPenalty=0;return patch}
   /* Срыв: шум кассеты, износ насадки */
   function gearPatch(skill,R,patch){var fx=fumbleFx(myChar,inf,skill,R);Object.assign(patch,fx.patch);fx.logs.filter(function(l){return !l.gmOnly}).forEach(function(l,i){setTimeout(function(){addLog(Object.assign({who:myChar.name||"???"},l))},5+i)});return patch}
   function doDodge(){
     if(isFear){
-      var R2=rollHit();var d2=R2.d;var wv2=fs.volya||0;var sc2=es["Выдержка"]||0;var t2=d2+wv2+sc2+rPen;
+      var R2=rollHit();var d2=R2.d;var wv2=fs.volya||0;var sc2=es["Выдержка"]||0;var t2=d2+wv2+sc2+rPen+inf.pen.of("volya");
       var det2="d10("+d2+")+Воля("+wv2+")+Выдержка("+sc2+")"+(wPen?" "+wPen+"(деморализован)":"")+(sPen?" "+sPen+"(потрясён)":"")+(inf.pen.dose?" "+inf.pen.dose+"(Доза)":"")+"="+t2;
       var resisted=t2>=atk.hitRoll;
       update(ref(db,"rooms/"+pr.room+"/characters/"+myId),gearPatch("Выдержка",R2,clearShakenPatch({})));

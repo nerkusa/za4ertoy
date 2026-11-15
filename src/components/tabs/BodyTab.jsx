@@ -3,7 +3,7 @@ import { cF } from '../../utils/character';
 import { getTraits } from '../../utils/traitStore';
 import { getProfs } from '../../utils/profStore';
 import { ORIGINS, originOf } from '../../data/professions';
-import { IRON_STAGES, UPKEEP, DISEASES, doseState } from '../../data/gear';
+import { IRON_STAGES, UPKEEP, DISEASES, doseState, diseaseList, diseaseByKey } from '../../data/gear';
 import { findBy, solutionList, ironSteps, upkeepCount } from '../../data/traits';
 import { inCombat } from '../../utils/gearFx';
 import { patchFromShopItem, removeSolution, setTip, setTipBroken } from '../../utils/gearOps';
@@ -48,8 +48,8 @@ var canEditId=gm||!c.locked;
 var fighting=inCombat(pr.initiative,c._fbId)&&!gm;
 var org=originOf(c.origin);var profs=getProfs();var pf=profs.find(function(p){return p.id===c.profession})||profs[0];
 var s=c.solutions||{};var arm=s.arm;var steps=ironSteps(c,cat);var upk=upkeepCount(c,cat)*UPKEEP;
-var dose=c.dose||0;var dis=c.diseases||[];
-var _d=useState(DISEASES[0]);var newDis=_d[0];var sNewDis=_d[1];
+var dose=c.dose||0;var dis=diseaseList(c);
+var _d=useState(DISEASES[0].key);var newDis=_d[0];var sNewDis=_d[1];
 var who=c.name||"???";
 function log(e){if(pr.addLog)pr.addLog(Object.assign({who:who,total:0,detail:""},e))}
 function apply(p,label){if(p.error){alert(p.error);return false}sv(Object.assign({},c,p));if(label)log({type:"gear",label:label});return true}
@@ -83,9 +83,10 @@ return(<div style={{display:"flex",flexDirection:"column",gap:12}}>
   <div className="row"><span className="lblm">Доза</span><b className="mono">{dose+" / 10"}</b>{doseState(dose)&&<span className="pill" style={{borderColor:"var(--rust)",color:"var(--rust)"}}>{doseState(dose)}</span>}
     <span className="pm"><button onClick={function(){sv(Object.assign({},c,{dose:Math.max(0,dose-1)}))}}>−</button><button onClick={function(){sv(Object.assign({},c,{dose:Math.min(10,dose+1)}))}}>+</button></span></div>
   <p className="hint">4–6 «Мутит»: −1 ко всем броскам. 7–9 «Горячка пятна»: −2. 10 — «Край». При Дозе 4+ отдых не восстанавливает Здоровье.</p>
-  <div className="row">{dis.length===0&&<span className="hint">Болезней нет.</span>}{dis.map(function(d){return <span key={d} className="pill" style={{borderColor:"var(--rust)",color:"var(--rust)"}}>{d}{gm&&<button onClick={function(){sv(Object.assign({},c,{diseases:dis.filter(function(x){return x!==d})}))}} style={{border:"none",background:"none",color:"var(--rust)",padding:"0 0 0 4px"}}>✕</button>}</span>})}</div>
-  {dis.length>0&&<p className="hint">Любая болезнь: −1 к броскам от Тела и Реакции.</p>}
-  {gm&&<div className="row"><select value={newDis} onChange={function(e){sNewDis(e.target.value)}}>{DISEASES.map(function(d){return <option key={d} value={d}>{d}</option>})}</select><button className="btn sm" onClick={function(){if(dis.indexOf(newDis)<0)sv(Object.assign({},c,{diseases:dis.concat([newDis])}))}}>Добавить болезнь</button></div>}
+  <div style={{display:"flex",flexDirection:"column",gap:6}}>{dis.length===0&&<span className="hint">Болезней нет.</span>}{dis.map(function(d){return <div key={d.key} style={{borderLeft:"3px solid var(--rust)",paddingLeft:8}}>
+    <div className="row" style={{justifyContent:"space-between"}}><b>{d.name}</b>{gm&&<button className="btn sm" onClick={function(){sv(Object.assign({},c,{diseases:(c.diseases||[]).filter(function(x){var k=typeof x==="string"?x:(x.key||x.name);return k!==d.key&&k!==d.name})}))}}>Вылечена</button>}</div>
+    <div className="hint">{d.text+". Лечение: "+d.cure+"."}</div></div>})}</div>
+  {gm&&<div className="row"><select value={newDis} onChange={function(e){sNewDis(e.target.value)}}>{DISEASES.map(function(d){return <option key={d.key} value={d.key}>{d.name}</option>})}</select><button className="btn sm" onClick={function(){var d=diseaseByKey(newDis);if(d&&!dis.some(function(x){return x.key===d.key}))sv(Object.assign({},c,{diseases:(c.diseases||[]).concat([{key:d.key,name:d.name}])}))}}>Добавить болезнь</button></div>}
   <div className="row"><button className="btn" onClick={foodCheck}>Проверить еду · СЛ 12</button></div>
   <p className="hint">Бинты (+1d6 Здоровья) и синька (−2 Дозы) лежат в сумке и применяются оттуда.</p>
 </div>
