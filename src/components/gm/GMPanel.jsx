@@ -11,7 +11,7 @@ import { grantPatch, grantLabel } from '../../utils/grant';
 import { rollTrinket } from '../../data/trinkets';
 import { r1 } from '../../utils/dice';
 import { fmtMoney, priceNum } from '../../utils/currency';
-import { IconCar, IconParty, IconChat, IconHistory, IconSkull, IconShop, IconGear, IconChar, IconLib } from '../../icons/index';
+import { IconCar, IconFlag, IconParty, IconChat, IconHistory, IconSkull, IconShop, IconGear, IconChar, IconLib } from '../../icons/index';
 import BestiaryEditor from './BestiaryEditor';
 import DonatePage from './DonatePage';
 import GameView from '../GameView';
@@ -24,6 +24,7 @@ import ProfEditor from './ProfEditor';
 import ShopEditor from './ShopEditor';
 import GearEditor from './GearEditor';
 import VehiclesPanel from './VehiclesPanel';
+import FactionsPanel from './FactionsPanel';
 
 const NAV = [
   { id: 'overview', icon: <IconParty />, label: 'Отряд' },
@@ -31,6 +32,7 @@ const NAV = [
   { id: 'history', icon: <IconHistory />, label: 'История' },
   { id: 'bestiary', icon: <IconSkull />, label: 'Бестиарий' },
   { id: 'vehicles', icon: <IconCar />, label: 'Машины' },
+  { id: 'factions', icon: <IconFlag />, label: 'Фракции' },
   { id: 'shop', icon: <IconShop />, label: 'Каталог' },
   { id: 'gear', icon: <IconGear />, label: 'Эффекты' },
   { id: 'profs', icon: <IconChar />, label: 'Профессии' },
@@ -275,7 +277,7 @@ function GMPanel(pr) {
   const [showDonate, setShowDonate] = useState(false);
 
   const sel = pr.characters.find(function (c) { return c._fbId === sid; });
-  if (sel) return <GameView char={sel} save={function (d) { pr.saveChar(sel._fbId, d); }} onBack={function () { setSid(null); }} isGM={true} logs={pr.logs} addLog={pr.addLog} addGmLog={pr.addGmLog} chat={pr.chat} sendChat={pr.sendChat} lore={pr.lore} mapData={pr.mapData} saveMap={pr.saveMap} characters={pr.characters} spawned={pr.spawned} saveSpawned={pr.saveSpawned} pendAtk={pr.pendAtk} clearPendingAttack={pr.clearPendingAttack} room={pr.roomCode} savePendingAttack={pr.savePendingAttack} saveNpcHit={pr.saveNpcHit} shop={pr.shop} initiative={pr.initiative} saveInitiative={pr.saveInitiative} traits={pr.traits} />;
+  if (sel) return <GameView char={sel} save={function (d) { pr.saveChar(sel._fbId, d); }} onBack={function () { setSid(null); }} isGM={true} logs={pr.logs} addLog={pr.addLog} addGmLog={pr.addGmLog} chat={pr.chat} sendChat={pr.sendChat} lore={pr.lore} mapData={pr.mapData} saveMap={pr.saveMap} characters={pr.characters} spawned={pr.spawned} saveSpawned={pr.saveSpawned} pendAtk={pr.pendAtk} clearPendingAttack={pr.clearPendingAttack} room={pr.roomCode} savePendingAttack={pr.savePendingAttack} saveNpcHit={pr.saveNpcHit} shop={pr.shop} initiative={pr.initiative} saveInitiative={pr.saveInitiative} traits={pr.traits} factions={pr.factions} />;
 
   const backToOverview = function () { setSection('overview'); };
 
@@ -289,10 +291,11 @@ function GMPanel(pr) {
         {section === 'overview' && <Overview characters={pr.characters} saveChar={pr.saveChar} deleteChar={pr.deleteChar} onOpen={function (id) { setSid(id); }} addLog={pr.addLog} addGmLog={pr.addGmLog} myName={pr.myName} shop={pr.shop} />}
         {section === 'chat' && <ChatSection chat={pr.chat} logs={pr.logs} sendChat={pr.sendChat} addLog={pr.addLog} clearChat={pr.clearChat} clearLogs={pr.clearLogs} characters={pr.characters} spawned={pr.spawned} />}
         {section === 'history' && <HistoryPanel gmLog={pr.gmLog} clearGmLog={pr.clearGmLog} />}
-        {section === 'bestiary' && <BestiaryEditor npcTempl={pr.npcTempl} saveNpcTempl={pr.saveNpcTempl} spawned={pr.spawned} saveSpawned={pr.saveSpawned} onBack={backToOverview} addLog={pr.addLog} characters={pr.characters} roomCode={pr.roomCode} savePendingAttack={pr.savePendingAttack} clearPendingAttack={pr.clearPendingAttack} pendAtk={pr.pendAtk} logs={pr.logs} initiative={pr.initiative} saveInitiative={pr.saveInitiative} shop={pr.shop} scene={pr.scene} saveScene={pr.saveScene} vehicles={pr.vehicles} />}
+        {section === 'bestiary' && <BestiaryEditor npcTempl={pr.npcTempl} saveNpcTempl={pr.saveNpcTempl} spawned={pr.spawned} saveSpawned={pr.saveSpawned} onBack={backToOverview} addLog={pr.addLog} characters={pr.characters} roomCode={pr.roomCode} savePendingAttack={pr.savePendingAttack} clearPendingAttack={pr.clearPendingAttack} pendAtk={pr.pendAtk} logs={pr.logs} initiative={pr.initiative} saveInitiative={pr.saveInitiative} shop={pr.shop} scene={pr.scene} saveScene={pr.saveScene} vehicles={pr.vehicles} factions={pr.factions} />}
         {section === 'lore' && <LoreEditor lore={pr.lore} saveLore={pr.saveLore} mapData={pr.mapData} saveMap={pr.saveMap} characters={pr.characters} onBack={backToOverview} />}
         {section === 'profs' && <ProfEditor profs={pr.profs} saveProfs={pr.saveProfs} onBack={backToOverview} />}
         {section === 'vehicles' && <VehiclesPanel characters={pr.characters} saveChar={pr.saveChar} spawned={pr.spawned} saveSpawned={pr.saveSpawned} vehicles={pr.vehicles} roomCode={pr.roomCode} addLog={pr.addLog} scene={pr.scene} />}
+        {section === 'factions' && <FactionsPanel factions={pr.factions} saveFactions={pr.saveFactions} />}
         {section === 'shop' && <ShopEditor shop={pr.shop} saveShop={pr.saveShop} onBack={backToOverview} />}
         {section === 'gear' && <GearEditor traits={pr.traits} saveTraits={pr.saveTraits} onBack={backToOverview} />}
       </div>

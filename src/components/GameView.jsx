@@ -6,6 +6,7 @@ import { IconCar, IconBattle, IconChat, IconLib, IconScroll, IconSkills, IconBra
 import Dossier from './Dossier';
 import CreationWizard from './CreationWizard';
 import LifepathStep from './LifepathStep';
+import ReputationCard from './ReputationCard';
 import PartyRail from './PartyRail';
 import ChatTab from './tabs/ChatTab';
 import SkillsTab from './tabs/SkillsTab';
@@ -62,6 +63,7 @@ return(<div className="zc-main"><RollPopup roll={rP} onClose={function(){sRP(nul
 {tab==="combat"&&<CombatTab char={c} save={pr.save} logs={pr.logs} addLog={pr.addLog} onRoll={sRP} spawned={pr.spawned} saveSpawned={pr.saveSpawned} characters={pr.characters} isGM={pr.isGM} onNpcDeath={sNpcDeathEv} savePendingAttack={pr.savePendingAttack} room={pr.room} saveNpcHit={pr.saveNpcHit} shop={pr.shop} initiative={pr.initiative} saveInitiative={pr.saveInitiative}/>}
 {tab==="bracelet"&&<BraceletTab char={c} save={pr.save} onRoll={sRP} isGM={pr.isGM} addLog={pr.addLog} addGmLog={pr.addGmLog} shop={pr.shop} initiative={pr.initiative}/>}
 {tab==="body"&&<BodyTab char={c} save={pr.save} onRoll={sRP} isGM={pr.isGM} addLog={pr.addLog} shop={pr.shop} initiative={pr.initiative} changeAccount={pr.changeAccount}/>}
+{tab==="body"&&<div style={{marginTop:12}}><ReputationCard factions={pr.factions}/></div>}
 {tab==="garage"&&<GarageTab char={c} save={pr.save} onRoll={sRP} isGM={pr.isGM} addLog={pr.addLog} shop={pr.shop}/>}
 {tab==="bag"&&<InvTab char={c} save={pr.save} shop={pr.shop} addLog={pr.addLog} onRoll={sRP}/>}
 {tab==="chat"&&<ChatTab chat={pr.chat} logs={pr.logs} sendChat={pr.sendChat} addLog={pr.addLog} onRoll={sRP} onCoopRoll={sCoopRoll} char={isGMv?null:c} characters={pr.characters} spawned={pr.spawned} who={isGMv?"Мастер":(c.name||"???")} coopTarget={coopTarget} onCoopConsumed={function(){sCoopTarget(null)}}/>}
