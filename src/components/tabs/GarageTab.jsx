@@ -26,7 +26,7 @@ function toggleDrive(v){var on=v.driverId!==c._fbId;sv(Object.assign({},c,{garag
 return(<div style={{display:"flex",flexDirection:"column",gap:12}}>
   <h2>Гараж</h2>
   <p className="hint">Обычная езда проверок не требует. Бросок водителя — в погоне, на таране, в топи и на развороте под огнём: Реакция + Вождение + Управляемость + d10. Погоню и таран ведёт мастер.</p>
-  {g.length===0&&<p className="hint">Машин нет.</p>}
+  {g.length===0&&<p className="hint">Машин нет. Купи ниже из каталога или попроси мастера выдать.</p>}
   <div className="cards">{g.map(function(v){var driving=v.driverId===c._fbId;return <VehicleCard key={v.id} v={v} sub={driving?"ты за рулём":""} driverName={driving?who:null}>
     <div className="row">
       <button className={"btn sm"+(driving?" main":"")} onClick={function(){toggleDrive(v)}}>{driving?"Выйти из-за руля":"За руль"}</button>
@@ -41,6 +41,7 @@ return(<div style={{display:"flex",flexDirection:"column",gap:12}}>
     </div>}
     {gm&&<div className="row"><span className="lblm">Мастер:</span>{[-5,-1,1,5].map(function(d){return <button key={d} className="btn sm" onClick={function(){upd(v.id,{hull:Math.max(0,Math.min(v.maxHull,v.hull+d))})}}>{"Корпус "+(d>0?"+":"")+d}</button>})}<button className="btn sm" onClick={function(){upd(v.id,{stopped:!v.stopped})}}>{v.stopped?"Поехала":"Встала"}</button><button className="btn sm" onClick={function(){if(window.confirm("Убрать машину из гаража?"))sv(Object.assign({},c,{garage:g.filter(function(x){return x.id!==v.id})}))}}>Убрать</button></div>}
   </VehicleCard>})}</div>
+  {!gm&&(pr.shop||[]).filter(function(i){return i.cat==="vehicle"&&!i.notForSale}).length===0&&<p className="hint">В каталоге пока нет машин — попроси мастера добавить стартовый каталог.</p>}
   {!gm&&<ShopPicker color="#4f5b2a" label="Купить машину" items={(pr.shop||[]).filter(function(i){return i.cat==="vehicle"})} sub={function(it){return it.desc||""}} onPick={buy}/>}
   <p className="hint">Горючка: канистра на 20 л — один перегон буханке или джипу, два — мотоциклу. Ремонт Корпуса — за час работы; мотор и колесо — Механика СЛ 14.</p>
 </div>)}
