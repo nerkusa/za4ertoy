@@ -1,28 +1,26 @@
 import React, { useState } from 'react';
 import { db, ref, set } from '../../firebase';
-import { VEHICLES, newVehicle } from '../../data/vehicles';
+import { normalizeVehicle } from '../../data/vehicles';
+import { allVehicles } from '../../utils/garage';
 import { cF, hpOf } from '../../utils/character';
 import { rollHit, r1 } from '../../utils/dice';
-import { driverRoll, chaseRound, CHASE_GOAL, ramResult, vehicleHit, zeroHull, speedOf } from '../../utils/vehicles';
+import { driverRoll, chaseRound, CHASE_GOAL, ramResult, ramSelfFrac, ramDiceOf, vehicleHit, zeroHull } from '../../utils/vehicles';
 import { DT } from '../../data/stats';
-import VehicleCard from '../VehicleCard';
 
 /* Машины у мастера: свои машины NPC, все машины партии, погоня, таран,
    попадание по машине (глава 7). Машина в бою ходит через водителя. */
 export default function VehiclesPanel(pr) {
   const chars = pr.characters || []; const spawned = pr.spawned || {}; const gmV = pr.vehicles || {};
-  const [addKey, setAddKey] = useState('buggy');
   const [chase, setChase] = useState({ a: '', b: '', pa: 0, pb: 0, round: 0, last: '' });
   const [ram, setRam] = useState({ att: '', tgt: '' });
   const [hit, setHit] = useState({ v: '', dmg: 10, type: 'П' });
 
-  /* Все машины: мастерские и из гаражей игроков. ref: "gm:id" или "pc:charId:id" */
-  const all = [];
-  Object.keys(gmV).forEach(function (id) { all.push({ ref: 'gm:' + id, v: gmV[id], owner: 'мастер' }); });
-  chars.forEach(function (c) { (c.garage || []).forEach(function (v) { all.push({ ref: 'pc:' + c._fbId + ':' + v.id, v: v, owner: c.name || '?', char: c }); }); });
+  /* Все машины: партии, NPC и из гаражей игроков (utils/garage) */
+  const all = allVehicles(chars, gmV).map(function (e) { return Object.assign({}, e, { owner: e.ownerName }); });
   function find(r) { return all.find(function (x) { return x.ref === r; }); }
   function saveV(entry, nv) {
-    if (entry.ref.indexOf('gm:') === 0) { const id = entry.ref.slice(3); set(ref(db, 'rooms/' + pr.roomCode + '/vehicles/' + id), nv); return; }
+    nv = normalizeVehicle(nv);
+    if (entry.ref.indexOf('node:') === 0) { set(ref(db, 'rooms/' + pr.roomCode + '/vehicles/' + nv.id), nv); return; }
     const c = entry.char; pr.saveChar(c._fbId, Object.assign({}, c, { garage: (c.garage || []).map(function (x) { return x.id === nv.id ? nv : x; }) }));
   }
   function log(label, detail, total) { pr.addLog({ who: 'ГМ', type: 'chase', label: label, detail: detail || '', total: total || 0 }); }
@@ -42,8 +40,6 @@ export default function VehiclesPanel(pr) {
   }
   const scene = pr.scene || {};
 
-  function addGm() { const v = newVehicle(addKey); set(ref(db, 'rooms/' + pr.roomCode + '/vehicles/' + v.id), v); log('На дороге: ' + v.name); }
-  function delGm(id) { set(ref(db, 'rooms/' + pr.roomCode + '/vehicles/' + id), null); }
 
   /* ── Погоня ── */
   function chaseStep() {
@@ -75,7 +71,7 @@ export default function VehiclesPanel(pr) {
       else { const n = spawned[parts[2]]; def = R.d + ((n.stats || {}).reak || 0) + ((n.skills || {}).dodge || 0); tgtName = n.name; }
       defTxt = 'Уклонение ' + def;
     } else { alert('Выбери цель'); return; }
-    const res = ramResult(ra.total, def, A.v.ram);
+    const res = ramResult(ra.total, def, ramDiceOf(A.v, !T), undefined, ramSelfFrac(A.v));
     if (!res.hit) { log('Таран: ' + A.v.name + ' → ' + tgtName + ' — мимо', 'Вождение ' + ra.total + ' против ' + defTxt, ra.total); return; }
     const notes = [];
     if (T) {
@@ -105,7 +101,7 @@ export default function VehiclesPanel(pr) {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-      <h2>Машины</h2>
+      <h2>Погоня, таран, попадание</h2>
       <p className="hint">Бросок водителя: Реакция + Вождение + Управляемость + d10. Машина в бою ходит через водителя. Стрельба на ходу (флаг сцены «На ходу» в бестиарии): −2, водитель −4, дорожники без штрафа.</p>
 
       <div className="sec">
@@ -135,25 +131,6 @@ export default function VehiclesPanel(pr) {
         <p className="hint">1 водитель (броня машины берёт половину, у мотоцикла — нет) · 2 колесо · 3–4 корпус · 5 мотор, −1 к Скорости · 6 бак, на d6 = 6 горит.</p>
       </div>
 
-      <div className="sec">
-        <div className="row" style={{ justifyContent: 'space-between' }}><h3>Машины мастера</h3>
-          <div className="row"><select value={addKey} onChange={function (e) { setAddKey(e.target.value); }}>{VEHICLES.map(function (v) { return <option key={v.key} value={v.key}>{v.name}</option>; })}</select><button className="btn sm" onClick={addGm}>Вывести на дорогу</button></div></div>
-        {Object.keys(gmV).length === 0 && <p className="hint">Своих машин пока нет.</p>}
-        <div className="gm-cards">{Object.keys(gmV).map(function (id) {
-          const v = gmV[id]; const d = driverOf(v); const E = { ref: 'gm:' + id };
-          return <VehicleCard key={id} v={v} sub={'скорость ' + speedOf(v)} driverName={d ? d.name : null}>
-            <div className="row"><select value={v.driverId || ''} onChange={function (e) { saveV(E, Object.assign({}, v, { driverId: e.target.value || null })); }}><option value="">— водитель —</option>{live.map(function (e) { return <option key={e[0]} value={e[0]}>{e[1].name}</option>; })}{chars.map(function (c) { return <option key={c._fbId} value={c._fbId}>{(c.name || '?') + ' (игрок)'}</option>; })}</select></div>
-            <div className="row">{[-5, -1, 1, 5].map(function (dd) { return <button key={dd} className="btn sm" onClick={function () { saveV(E, Object.assign({}, v, { hull: Math.max(0, Math.min(v.maxHull, v.hull + dd)) })); }}>{'Корпус ' + (dd > 0 ? '+' : '') + dd}</button>; })}
-              {v.burning && <button className="btn sm" onClick={function () { saveV(E, Object.assign({}, v, { burning: false })); }}>Потушить</button>}
-              <button className="btn sm" onClick={function () { if (window.confirm('Убрать машину?')) delGm(id); }}>Убрать</button></div>
-          </VehicleCard>;
-        })}</div>
-      </div>
-
-      {all.filter(function (x) { return x.char; }).length > 0 && <div className="sec">
-        <h3>Машины партии</h3>
-        <div className="gm-cards">{all.filter(function (x) { return x.char; }).map(function (x) { const d = driverOf(x.v); return <VehicleCard key={x.ref} v={x.v} sub={x.owner} driverName={d ? d.name : null} />; })}</div>
-      </div>}
     </div>
   );
 }

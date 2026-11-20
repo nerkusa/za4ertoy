@@ -610,3 +610,37 @@ describe('новое оружие, броня, бестиарий', function(){
     expect(GROUP_HINTS['Твари']).toContain('юёр');
   });
 });
+
+/* ── v4, п.16–17: машины ── */
+import { newVehicle as nv4, normalizeVehicle } from '../data/vehicles';
+import { installMod, removeMod, refuel, legDone, ramSelfFrac, swampPen, vehicleHit as vh4, modSlots } from '../utils/vehicles';
+describe('машины v4', function(){
+  test('бронелисты и отвал', function(){
+    var b=nv4('buggy');var r=installMod(b,'bronelisty').v;
+    expect(r.armorType).toBe('medium');expect(r.armorHp).toBe(20);expect(r.maxArmorHp).toBe(20);expect(r.handling).toBe(0);
+    var r2=installMod(r,'otval').v;expect(r2.ram).toBe('5d6');expect(r2.speed).toBe(3);expect(ramSelfFrac(r2)).toBe(0.25);
+    var back=removeMod(removeMod(r2,'otval').v,'bronelisty').v;
+    expect(back.armorType).toBe('light');expect(back.armorHp).toBe(10);expect(back.ram).toBe('3d6');expect(back.speed).toBe(4);expect(back.mods).toEqual([]);
+  });
+  test('слоты: мотоцикл — 1', function(){
+    var m=nv4('zhuk');expect(modSlots(m)).toBe(1);var a=installMod(m,'setka').v;expect(installMod(a,'zapbak').error).toBeTruthy();
+    expect(installMod(installMod(nv4('jeep'),'kletka').v,'kletka').error).toBeTruthy();
+    expect(installMod(nv4('bukhanka'),'kletka').v.seats).toBe('6');
+  });
+  test('бак: перегон и канистра', function(){
+    var j=nv4('jeep');expect(j.fuel).toBe(3);
+    var x=legDone(legDone(legDone(j).v).v);expect(x.empty).toBe(true);expect(x.v.stopped).toBe(true);
+    var f=refuel(x.v);expect(f.v.fuel).toBe(1);expect(f.v.stopped).toBe(false);
+    var q=refuel(Object.assign({},nv4('zhuk'),{fuel:0}));expect(q.add).toBe(2);
+    expect(installMod(j,'zapbak').v.tank).toBe(4);
+  });
+  test('местность и миграция', function(){
+    expect(swampPen(nv4('kozlik'))).toBe(-1);expect(swampPen(nv4('bukhanka'))).toBe(0);expect(swampPen(nv4('jeep'))).toBe(-2);
+    var old={id:'x',key:'jeep',name:'Джип',hull:45,tank:3,armorType:'medium',armorHp:18,wheelsHit:1};
+    var n=normalizeVehicle(old,{type:'char',id:'p'});expect(n.fuel).toBe(3);expect(n.mods).toEqual([]);expect(n.damage).toEqual({wheels:1,engine:false,burning:false});expect(n.owner).toEqual({type:'char',id:'p'});
+  });
+  test('гусеница и цистерна', function(){
+    expect(vh4(nv4('utyug'),10,'П',function(){return 3},{d6:2}).v.stopped).toBe(true);
+    var t=vh4(nv4('bochka'),10,'П',function(){return 3},{d6:6,fire:4});expect(t.boom).toBe(9*2);
+  });
+});

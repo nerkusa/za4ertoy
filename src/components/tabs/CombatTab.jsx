@@ -59,7 +59,7 @@ var atkPen=armorPenaltyOf(c,fs).atk;var woundPen=depoOn?0:woundDmgPenalty(curHp,
 /* Удар протезом бьёт так, будто Тело 7 (глава 10) */
 function telOf(w,statKey){return (w&&w.prosthetic&&statKey==="telo")?PROSTHETIC_TELO:(fs[statKey]||0)}
 /* Стрельба на ходу (сцена «На ходу»): −2, водитель −4 */
-var isDriver=(c.garage||[]).some(function(v){return v.driverId===c._fbId});var movePen=getScene().moving?movingPen(isDriver,false):0;
+var isDriver=(c.garage||[]).some(function(v){return v.driverId===c._fbId})||Object.values(pr.vehicles||{}).some(function(v){return v&&v.driverId===c._fbId});var movePen=getScene().moving?movingPen(isDriver,false):0;
 function aimP2(zone){return Math.max(0,aimPen(zone)-aimBonus+inf.pen.aim)}
 var hpP=mx>0?(curHp/mx)*100:0;
 var isGM=pr.isGM;

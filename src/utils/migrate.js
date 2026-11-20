@@ -4,6 +4,7 @@
 import { ALL_SKILLS } from '../data/stats';
 import { diseaseByKey, CASSETTES } from '../data/gear';
 import { prosthesesOf } from './crits';
+import { normalizeVehicle } from '../data/vehicles';
 
 function migrateChar(c){
   if(!c||typeof c!=="object")return c;
@@ -32,6 +33,9 @@ function migrateChar(c){
       var d=CASSETTES.find(function(k){return k.key===x.key});
       return Object.assign({},x,{condition:x.condition||"good",capacity:x.capacity||(x.kind==="slep"?128:(d?d.cap:64)),cls:x.cls||(d?d.cls:"CIVIL"),title:x.title||(d?d.name:x.key)});
     }));
+  /* v4: машина — бак, обвес, повреждения */
+  if(Array.isArray(c.garage)&&c.garage.some(function(v){return v&&(v.fuel==null||!Array.isArray(v.mods)||!v.damage)}))
+    set("garage",c.garage.map(function(v){return v&&(v.fuel==null||!Array.isArray(v.mods)||!v.damage)?normalizeVehicle(v):v}));
   return out;
 }
 function needsMigration(c){return migrateChar(c)!==c}
