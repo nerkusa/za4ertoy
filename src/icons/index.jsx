@@ -20,10 +20,11 @@ var IconShop=I(["M3 9l2-5h14l2 5","M4 9v11h16V9","M9 20v-6h6v6"]);
 var IconHistory=I(["M12 7v6l4 2","M4 12a8 8 0 1 0 3-6","M3 4v4h4"]);
 var IconGive=I(["M12 4v12","M7 11l5 5 5-5","M4 20h16"]);
 var IconCar=I(["M3 15h18v-4l-3-5H6l-3 5z","M3 15v3h3v-3","M18 15v3h3v-3","M7 13h2","M15 13h2"]);
+var IconCards=I(["M4 6l8-3 2 5","M8 7h10v14H8z","M11 12h4"]);
 var IconFlag=I(["M5 21V3","M5 4h12l-3 4 3 4H5"]);
 var IconMap=I(["M3 6l6-2 6 2 6-2v14l-6 2-6-2-6 2z","M9 4v14","M15 6v14"]);
 
 /* d10 — силуэт десятигранника с ребром посередине */
 var IconD10=function(pr){var s=(pr&&pr.size)||16;var st=(pr&&pr.style)||{};return <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" strokeLinecap="round" style={st}><path d="M12 2 L20 8.5 L15.5 21 L8.5 21 L4 8.5 Z"/><path d="M4 8.5 L20 8.5"/></svg>};
 
-export { IconCar, IconFlag, IconChar, IconBattle, IconInv, IconLib, IconParty, IconChat, IconScroll, IconD10, IconSkills, IconBracelet, IconBody, IconSkull, IconShield, IconGear, IconShop, IconHistory, IconGive, IconMap };
+export { IconCards, IconCar, IconFlag, IconChar, IconBattle, IconInv, IconLib, IconParty, IconChat, IconScroll, IconD10, IconSkills, IconBracelet, IconBody, IconSkull, IconShield, IconGear, IconShop, IconHistory, IconGive, IconMap };

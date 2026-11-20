@@ -90,7 +90,7 @@ function nC(name){return{name:name||"",level:1,xp:0,portrait:"",bio:[],locked:fa
   stats:iS(),skills:iSk(),skillPts:0,money:0,profession:"none",origin:"post",
   dose:0,diseases:[],crits:[],combatDepoUsed:false,depoCharge:1,
   bracelet:null,cassettes:[],solutions:{arm:null,leg:null,implants:[],addons:[]},
-  prostheses:{armL:null,armR:null,legL:null,legR:null,armTips:[],legTips:[]},reputation:{},garage:[],debts:[],molva:0}}
+  prostheses:{armL:null,armR:null,legL:null,legR:null,armTips:[],legTips:[]},reputation:{},garage:[],debts:[],molva:0,signs:[],heroCard:null,burned:0}}
 
 /* Опыт до следующего уровня растёт на 100 за уровень. xpForLevel(N) —
    сколько всего опыта нужно набрать с нуля, чтобы ДОСТИЧЬ уровня N. */

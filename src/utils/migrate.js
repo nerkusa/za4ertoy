@@ -33,6 +33,10 @@ function migrateChar(c){
       var d=CASSETTES.find(function(k){return k.key===x.key});
       return Object.assign({},x,{condition:x.condition||"good",capacity:x.capacity||(x.kind==="slep"?128:(d?d.cap:64)),cls:x.cls||(d?d.cls:"CIVIL"),title:x.title||(d?d.name:x.key)});
     }));
+  /* v4: Знаки, карта героя, сгоревшая Выдержка */
+  if(!Array.isArray(c.signs))set("signs",[]);
+  if(c.heroCard===undefined)set("heroCard",null);
+  if(c.burned==null)set("burned",0);
   /* v4: машина — бак, обвес, повреждения */
   if(Array.isArray(c.garage)&&c.garage.some(function(v){return v&&(v.fuel==null||!Array.isArray(v.mods)||!v.damage)}))
     set("garage",c.garage.map(function(v){return v&&(v.fuel==null||!Array.isArray(v.mods)||!v.damage)?normalizeVehicle(v):v}));

@@ -8,6 +8,8 @@ import { newVehicle, normalizeVehicle } from '../../data/vehicles';
 import { myVehicles } from '../../utils/garage';
 import ShopPicker from '../ShopPicker';
 import VehicleCard from '../VehicleCard';
+import SignsStrip from '../SignsStrip';
+import { lastRollPatch } from '../../utils/signs';
 
 /* Вкладка «Машина»: свои машины и машины партии (ТЗ v4, п.16.3). */
 function GarageTab(pr){
@@ -22,7 +24,7 @@ function setV(e,v,extra){
 }
 function upd(e,patch){setV(e,Object.assign({},e.v,patch))}
 function drv(){return{reak:inf.fs.reak||0,driving:inf.eSk["Вождение"]||0,pen:inf.rollPen("reak").total}}
-function roll(v){var r=driverRoll(drv(),v,{swamp:getScene().swamp});log({type:"skill",label:"Бросок водителя: "+v.name+(r.crit?" · крит":r.fumble?" · срыв":""),detail:"d10("+r.d+") + "+r.parts.map(function(p){return p.label+"("+p.value+")"}).join(" + ")+" = "+r.total,total:r.total});if(pr.onRoll)pr.onRoll({label:"Бросок водителя",d10:r.d,crit:r.crit,fumble:r.fumble,parts:r.parts,total:r.total,subtext:v.name})}
+function roll(v){var r=driverRoll(drv(),v,{swamp:getScene().swamp});sv(Object.assign({},c,lastRollPatch("Вождение","reak",r.d,r.total,pr.initiative,"Вождение")));log({type:"skill",label:"Бросок водителя: "+v.name+(r.crit?" · крит":r.fumble?" · срыв":""),detail:"d10("+r.d+") + "+r.parts.map(function(p){return p.label+"("+p.value+")"}).join(" + ")+" = "+r.total,total:r.total});if(pr.onRoll)pr.onRoll({label:"Бросок водителя",d10:r.d,crit:r.crit,fumble:r.fumble,parts:r.parts,total:r.total,subtext:v.name})}
 /* Расход вещи из сумки: null — нет такой */
 function useItem(re){var inv=c.inventory||[];var it=inv.find(function(i){return re.test(i.name||"")&&(i.qty||0)>0});if(!it)return null;
   return{inventory:inv.map(function(i){return i===it?Object.assign({},i,{qty:(i.qty||0)-1}):i}).filter(function(i){return !(i.qty!=null&&i.qty<=0)})}}
@@ -50,6 +52,7 @@ function shootMount(e){var v=e.v;var m=v.mount;if(!m)return;var R=rollHit();var 
 function driverName(v){if(!v.driverId)return null;if(v.driverId===c._fbId)return who;var d=(pr.characters||[]).find(function(x){return x._fbId===v.driverId});return d?d.name:"кто-то"}
 return(<div style={{display:"flex",flexDirection:"column",gap:12}}>
   <h2>Машина</h2>
+  {(c.signs||[]).length>0&&<SignsStrip char={c} save={sv} addLog={pr.addLog} onRoll={pr.onRoll} initiative={pr.initiative} isGM={gm}/>}
   <p className="hint">Обычная езда проверок не требует. Бросок водителя — в погоне, на таране, в топи и на развороте под огнём: Реакция + Вождение + Управляемость + d10. Погоню, таран и перегоны ведёт мастер.</p>
   {list.length===0&&<p className="hint">Машин нет — ни своей, ни у партии. Купи ниже или попроси мастера выдать.</p>}
   <div className="cards">{list.map(function(e){var v=e.v;var driving=v.driverId===c._fbId;return <VehicleCard key={e.ref} v={v} sub={(e.owner.type==="party"?"машина партии":"твоя")+(driving?" · ты за рулём":"")} driverName={driverName(v)}>

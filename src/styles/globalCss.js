@@ -111,6 +111,17 @@ td{padding:6px 8px;border-bottom:1px solid var(--line);vertical-align:middle}
 tr:nth-child(even) td{background:#e4dac6}
 td.num{font-family:var(--f-mono);text-align:right;white-space:nowrap}
 .warnbox{border-left:5px solid var(--rust);background:#efe2d6;padding:8px 12px;font-size:13.5px}
+.tcards{display:flex;gap:8px;flex-wrap:wrap}
+.tcard{width:150px;min-height:200px;border:2px solid var(--ink);background:#f3ead2;padding:8px;display:flex;flex-direction:column;gap:5px;box-shadow:3px 3px 0 var(--ink)}
+.tcard .tnum{font-family:var(--f-mono);font-size:18px;color:var(--rust);text-align:center}
+.tcard b{font-family:var(--f-head);text-transform:uppercase;text-align:center;font-size:14px}
+.tcard .tm{font-size:12px;color:var(--muted);font-style:italic}
+.tcard .tt{font-size:12.5px}
+.tcard.outcome{background:#2a251e;color:#efe2c6}.tcard.outcome .tm{color:#cfc6b2}
+.tcard.back{background:repeating-linear-gradient(45deg,#2a251e 0 8px,#3a3226 8px 16px);color:#efe2c6;align-items:center;justify-content:center;text-align:center}
+.tcard.back .tnum{font-size:32px;color:#f0d79a}
+.tshow{position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:1001;display:flex;align-items:center;justify-content:center;animation:fadeIn .3s}
+.tshow .tcard{width:260px;min-height:360px;transform:scale(1);font-size:15px}.tshow .tcard b{font-size:22px}.tshow .tcard .tnum{font-size:30px}.tshow .tcard .tt,.tshow .tcard .tm{font-size:15px}
 .okbox{border-left:5px solid var(--swamp);background:#e5e4cc;padding:8px 12px;font-size:13.5px}
 
 /* bracelet */

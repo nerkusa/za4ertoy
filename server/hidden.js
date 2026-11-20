@@ -80,7 +80,8 @@ function restoreHidden(oldC, newC) {
   const events = [];
   if (!isObj(newC)) return { char: newC, events: events };
   const c = Object.assign({}, newC);
-  if (isObj(oldC) && oldC.heroCard !== undefined) c.heroCard = oldC.heroCard; else delete c.heroCard;
+  /* карту героя назначает только мастер; у игрока она всегда та же, что была */
+  c.heroCard = isObj(oldC) && oldC.heroCard !== undefined ? oldC.heroCard : null;
   const who = c.name || '???';
   const old = {};
   ((oldC && oldC.cassettes) || []).forEach(function (x) { if (isObj(x) && x.id) old[x.id] = x; });

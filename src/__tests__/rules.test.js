@@ -644,3 +644,29 @@ describe('машины v4', function(){
     var t=vh4(nv4('bochka'),10,'П',function(){return 3},{d6:6,fire:4});expect(t.boom).toBe(9*2);
   });
 });
+
+/* ── v4, п.14: Таро ── */
+import { TAROT, cardById } from '../data/tarot';
+import { canGiveSign, giveSign, freshRoll, signFits, rerollTotal, lastRollPatch } from '../utils/signs';
+import { migrateChar as mig4 } from '../utils/migrate';
+describe('Таро и Знаки', function(){
+  test('22 аркана, исходы не выдаются', function(){
+    expect(TAROT.length).toBe(22);expect(TAROT.filter(function(t){return t.kind==='outcome'}).map(function(t){return t.num})).toEqual(['XVI','XX','XXI']);
+    expect(canGiveSign({signs:[]},16).ok).toBe(false);
+  });
+  test('не больше трёх', function(){
+    var c={signs:[]};[18,7,1].forEach(function(id){c=Object.assign(c,giveSign(c,id))});
+    expect(c.signs.length).toBe(3);expect(giveSign(c,9).error).toBe('у героя уже три Знака');
+  });
+  test('переброс только после подходящего броска', function(){
+    var moon=cardById(18);
+    var c=Object.assign({},lastRollPatch('Скрытность','reak',3,9,null));
+    expect(signFits(moon,freshRoll(c,null))).toBe(true);
+    var c2=lastRollPatch('Вождение','reak',3,9,null);expect(signFits(moon,freshRoll(c2,null))).toBe(false);
+    var old={lastRoll:Object.assign({},c.lastRoll,{ts:Date.now()-10*60*1000})};expect(freshRoll(old,null)).toBeNull();
+    var ini={list:[{id:'a'}],round:3};var c3=lastRollPatch('Скрытность','reak',3,9,{list:[{id:'a'}],round:2});expect(freshRoll(c3,ini)).toBeNull();
+    expect(rerollTotal({d:3,total:9},8)).toBe(14);
+    expect(signFits(cardById(10),freshRoll(c2,null))).toBe(true);
+  });
+  test('миграция', function(){var m=mig4({name:'x',skills:{}});expect(m.signs).toEqual([]);expect(m.heroCard).toBeNull();expect(m.burned).toBe(0)});
+});

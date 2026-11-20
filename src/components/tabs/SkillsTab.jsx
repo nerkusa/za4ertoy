@@ -7,6 +7,8 @@ import { fineBlocked } from '../../data/traits';
 import { diseaseList } from '../../data/gear';
 import { getTraits } from '../../utils/traitStore';
 import { IconD10 } from '../../icons/index';
+import SignsStrip from '../SignsStrip';
+import { lastRollPatch } from '../../utils/signs';
 import { VYD, burnedOf, restoreState, restorePatch } from '../../utils/slep';
 
 /* Вкладка «Навыки»: проверки характеристик и навыков против СЛ.
@@ -38,7 +40,8 @@ function roll(statKey,skill){
   var patch={};if(c.shakenPenalty)patch.shakenPenalty=0;
   var fx=skill?fumbleFx(c,inf,skill,R):{patch:{},logs:[],notes:[]};
   Object.assign(patch,fx.patch);
-  if(Object.keys(patch).length)sv(Object.assign({},c,patch));
+  Object.assign(patch,lastRollPatch(skill,statKey,R.d,total,pr.initiative,skill||stName(statKey)));
+  sv(Object.assign({},c,patch));
   var label=skill||stName(statKey);
   var res=dc?(total>=dc?"успех":"провал"):"";
   var parts=[{label:stName(statKey),value:sVal}];
@@ -57,6 +60,7 @@ function roll(statKey,skill){
 function bonusOf(list){return (list||[]).filter(function(b){return b.amount}).map(function(b){return (b.amount>0?"+":"")+b.amount+" "+(b.src?b.src.name:"")}).join(", ")}
 
 return(<div style={{display:"flex",flexDirection:"column",gap:12}}>
+<SignsStrip char={c} save={sv} addLog={pr.addLog} onRoll={pr.onRoll} initiative={pr.initiative} isGM={isGM}/>
 <div className="slbar"><span>СЛ:</span>
 <button className={dc===0?"on":""} onClick={function(){sDC(0)}}>без СЛ</button>
 {DC_LIST.map(function(d){return <button key={d.v} className={dc===d.v?"on":""} title={d.l} onClick={function(){sDC(d.v)}}>{d.v}</button>})}

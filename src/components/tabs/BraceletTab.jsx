@@ -4,6 +4,8 @@ import { getTraits } from '../../utils/traitStore';
 import { BRACELETS, NOISE, IMPRINT_STAGES, CASS_KINDS, kindName } from '../../data/gear';
 import { cassDef, cassLabel, salePrice, CONDITIONS, condName } from '../../utils/cassettes';
 import { burnOnFail } from '../../utils/slep';
+import { lastRollPatch } from '../../utils/signs';
+import SignsStrip from '../SignsStrip';
 import { nestInfo, canInsert, solutionList, cassEffects, hasTablet } from '../../data/traits';
 import { fakeOutcome, slepCheck, slepDC, inCombat } from '../../utils/gearFx';
 import { patchFromShopItem } from '../../utils/gearOps';
@@ -56,6 +58,7 @@ function stability(x,scary){
   var patch={cassettes:cass.map(function(k){return k.id===x.id?Object.assign({},k,{imprint:res.imprint}):k})};
   var burn=res.ok?null:burnOnFail(c,x,imp0);
   if(burn)Object.assign(patch,burn.patch);
+  Object.assign(patch,lastRollPatch("Выдержка","volya",d,res.total,pr.initiative,scary?"страшная сцена":"стойкость слепка"));
   sv(Object.assign({},c,patch));
   var nm=scary?"Страшная сцена: стойкость слепка «"+def.name+"»":"Стойкость слепка «"+def.name+"»";
   log({type:"skill",label:nm+" — "+(res.ok?"устоял":"провал"),detail:"d10("+d+") + Воля + Выдержка"+(res.others?" − 2×"+res.others+" (другие слепки)":"")+" = "+res.total+(gm||tablet||scary?" против СЛ "+res.dc:""),total:res.total});
@@ -129,6 +132,7 @@ if(b){
   }
 }
 return(<div style={{display:"flex",flexDirection:"column",gap:12}}>
+{(c.signs||[]).length>0&&<SignsStrip char={c} save={sv} addLog={pr.addLog} onRoll={pr.onRoll} initiative={pr.initiative} isGM={gm}/>}
 {!b&&<div className="warnbox">Браслета нет. Без MG+ mind glider кассеты не читаются.</div>}
 {b&&<div className="bracelet">
   <div className="bhead">
