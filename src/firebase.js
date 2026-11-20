@@ -15,6 +15,10 @@ var subs = new Map();
 var waiters = new Map();
 var ridSeq = 1;
 var subSeq = 1;
+/* Токен сессии: при каждом подключении сервер узнаёт по нему, кто это
+   (мастер или игрок), и от этого зависит, что он присылает. */
+var sessionToken = null;
+var onSessionLost = null;
 
 function flushOutbox() {
   while (outbox.length) socket.send(JSON.stringify(outbox.shift()));
@@ -31,6 +35,7 @@ function connect() {
   socket.onopen = function () {
     connected = true;
     reconnectDelay = 500;
+    if (sessionToken) socket.send(JSON.stringify({ t: 'resume', token: sessionToken, rid: 'resume' }));
     flushOutbox();
     resubscribeAll();
   };
@@ -54,9 +59,11 @@ function connect() {
     } else if (msg.t === 'get' && msg.rid != null) {
       var w2 = waiters.get(msg.rid);
       if (w2) { waiters.delete(msg.rid); w2.resolve(makeSnap(msg.value)); }
+    } else if (msg.t === 'auth' && msg.rid === 'resume') {
+      if (!msg.ok && onSessionLost) onSessionLost(msg.error);
     } else if (msg.t === 'auth' && msg.rid != null) {
       var w3 = waiters.get(msg.rid);
-      if (w3) { waiters.delete(msg.rid); w3.resolve({ ok: !!msg.ok, error: msg.error || null, login: msg.login, role: msg.role }); }
+      if (w3) { waiters.delete(msg.rid); if (msg.ok && msg.token) sessionToken = msg.token; w3.resolve({ ok: !!msg.ok, error: msg.error || null, login: msg.login, role: msg.role, token: msg.token || null }); }
     } else if (msg.t === 'change_account' && msg.rid != null) {
       var w4 = waiters.get(msg.rid);
       if (w4) { waiters.delete(msg.rid); w4.resolve({ ok: !!msg.ok, error: msg.error || null, login: msg.login, role: msg.role }); }
@@ -158,6 +165,21 @@ function authDeleteAccount(login) {
   });
 }
 
+/* Возобновить сессию по сохранённому токену. Ответ: {ok, login, role}. */
+function authResume(token) {
+  sessionToken = token || null;
+  return new Promise(function (resolve) {
+    var rid = 'r' + (ridSeq++);
+    waiters.set(rid, { resolve: resolve });
+    send({ t: 'resume', token: token, rid: rid });
+  });
+}
+function authLogout() {
+  var t = sessionToken; sessionToken = null;
+  send({ t: 'logout', token: t });
+}
+function setSessionLostHandler(fn) { onSessionLost = fn; }
+
 var db = {};
 
-export { db, ref, set, get, onValue, update, remove, push, authLogin, authRegister, authChangeAccount, authDeleteAccount };
+export { db, ref, set, get, onValue, update, remove, push, authLogin, authRegister, authChangeAccount, authDeleteAccount, authResume, authLogout, setSessionLostHandler };

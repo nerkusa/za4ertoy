@@ -2,7 +2,7 @@
    возвращает того же персонажа, если менять нечего. Характеристики и уже
    полученные награды за уровни не пересчитываются. */
 import { ALL_SKILLS } from '../data/stats';
-import { diseaseByKey } from '../data/gear';
+import { diseaseByKey, CASSETTES } from '../data/gear';
 import { prosthesesOf } from './crits';
 
 function migrateChar(c){
@@ -25,6 +25,13 @@ function migrateChar(c){
   /* болезни-строки → объекты */
   if(Array.isArray(c.diseases)&&c.diseases.some(function(d){return typeof d==="string"}))
     set("diseases",c.diseases.map(function(d){if(typeof d!=="string")return d;var o=diseaseByKey(d);return o?{key:o.key,name:o.name}:{key:d,name:d}}));
+  /* v4: у кассеты есть состояние, ёмкость, класс и название */
+  if(Array.isArray(c.cassettes)&&c.cassettes.some(function(x){return x&&(!x.condition||!x.capacity||!x.cls)}))
+    set("cassettes",c.cassettes.map(function(x){
+      if(!x||(x.condition&&x.capacity&&x.cls))return x;
+      var d=CASSETTES.find(function(k){return k.key===x.key});
+      return Object.assign({},x,{condition:x.condition||"good",capacity:x.capacity||(x.kind==="slep"?128:(d?d.cap:64)),cls:x.cls||(d?d.cls:"CIVIL"),title:x.title||(d?d.name:x.key)});
+    }));
   return out;
 }
 function needsMigration(c){return migrateChar(c)!==c}

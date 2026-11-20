@@ -512,3 +512,50 @@ describe('миграция v3', function(){
   });
   test('новый персонаж миграции не требует', function(){expect(M.needsMigration(CH.nC("x"))).toBe(false);expect(M.needsMigration(M.migrateChar(old))).toBe(false)});
 });
+
+/* ── v4, п.15: кассеты ── */
+import { makeCassette, cassDef, salePrice, cassLabel, endSessionRolls, milOnly } from '../utils/cassettes';
+import { cassEffects as cassEff } from '../data/traits';
+describe('кассеты v4', function(){
+  test('запись на характеристику — только MIL, слепок — 128', function(){
+    var x=makeCassette({key:'zhila',kind:'orig',cls:'CIVIL',capacity:16},CAT);
+    expect(x.cls).toBe('MIL');
+    var s=makeCassette({key:'tishina',kind:'slep',capacity:32,donor:'Тропарь',imprint:'3'},CAT);
+    expect(s.capacity).toBe(128);expect(s.imprint).toBe(3);expect(s.donor).toBe('Тропарь');
+    expect(milOnly(cassDef({key:'medved'},CAT))).toBe(true);
+    expect(milOnly(cassDef({key:'tishina'},CAT))).toBe(false);
+  });
+  test('затёртая: −1, не ниже +1', function(){
+    var d=cassDef({key:'medved'},CAT);
+    var e=cassEff({kind:'orig',condition:'worn'},d);
+    expect(e.find(function(k){return k.skill==='Ближний бой'}).amount).toBe(1);
+    expect(e.find(function(k){return k.skill==='Запугивание'}).amount).toBe(1);
+  });
+  test('цена продажи', function(){
+    var d=cassDef({key:'medved'},CAT);
+    expect(salePrice({kind:'orig'},d)).toBe(400);
+    expect(salePrice({kind:'copy'},d)).toBe(200);
+    expect(salePrice({kind:'fake'},d)).toBe(400);
+    expect(salePrice({kind:'fake',revealed:true},d)).toBe(0);
+    expect(salePrice({kind:'orig',condition:'worn'},d)).toBe(300);
+    expect(salePrice({kind:'orig',condition:'broken'},d)).toBe(200);
+    expect(salePrice({kind:'slep'},cassDef({key:'torgash',kind:'slep'},CAT))).toBe(80);
+  });
+  test('палёнка в общем логе — оригинал', function(){
+    var x=makeCassette({key:'tverdaya_ruka',kind:'fake',condition:'worn'},CAT);
+    var d=cassDef(x,CAT);
+    expect(cassLabel(x,d,false)).toBe('Твёрдая рука (MIL · 64 · оригинал · затёртая)');
+    expect(cassLabel(x,d,true)).toContain('палёнка');
+  });
+  test('своя запись', function(){
+    var x=makeCassette({key:'custom',title:'Рыбак',kind:'copy',cls:'CIVIL',capacity:16,skill:'Выживание',amount:2},CAT);
+    var d=cassDef(x,CAT);expect(d.name).toBe('Рыбак');expect(d.cap).toBe(16);
+    expect(d.effects[0]).toEqual({type:'skill_bonus',skill:'Выживание',amount:2});
+  });
+  test('конец сессии: битая на 1 — испорчена', function(){
+    var c={cassettes:[{id:'a',inNest:true,condition:'broken',title:'А'},{id:'b',inNest:true,condition:'good'},{id:'c',inNest:false,condition:'broken'}]};
+    var r=endSessionRolls(c,function(){return 1});
+    expect(r.results.length).toBe(1);expect(r.cassettes[0].dead).toBe(true);expect(r.cassettes[2].dead).toBeUndefined();
+    expect(endSessionRolls(c,function(){return 2}).cassettes[0].dead).toBeUndefined();
+  });
+});

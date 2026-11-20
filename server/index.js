@@ -7,6 +7,8 @@ const { WebSocketServer } = require('ws');
 const PORT = process.env.PORT || 8788;
 const DATA_FILE = process.env.DATA_FILE || path.join(__dirname, 'data.json');
 const USERS_FILE = process.env.USERS_FILE || path.join(__dirname, 'users.json');
+const SESSIONS_FILE = process.env.SESSIONS_FILE || path.join(path.dirname(USERS_FILE), 'sessions.json');
+const hidden = require('./hidden');
 
 /* Встроенный аккаунт ГМ задаётся переменными окружения GM_LOGIN и
    GM_PASSWORD (см. deploy/zachertoy-server.service). Если они не заданы,
@@ -30,6 +32,34 @@ try {
   users = JSON.parse(fs.readFileSync(USERS_FILE, 'utf8'));
 } catch (e) {
   users = {};
+}
+
+/* Сессии: токен → {login, role}. Роль соединения берётся только отсюда —
+   клиенту на слово не верим. От роли зависит, что сервер отдаёт:
+   игроку скрытые поля (настоящий вид палёнки, карта героя) не уходят. */
+let sessions = {};
+try {
+  sessions = JSON.parse(fs.readFileSync(SESSIONS_FILE, 'utf8'));
+} catch (e) {
+  sessions = {};
+}
+let sessionsSaveTimer = null;
+function scheduleSessionsSave() {
+  if (sessionsSaveTimer) return;
+  sessionsSaveTimer = setTimeout(function () {
+    sessionsSaveTimer = null;
+    fs.writeFile(SESSIONS_FILE, JSON.stringify(sessions), function () {});
+  }, 300);
+}
+function newSession(login, role) {
+  const token = crypto.randomBytes(24).toString('hex');
+  sessions[token] = { login: login, role: role, ts: Date.now() };
+  scheduleSessionsSave();
+  return token;
+}
+function dropSessionsOf(login) {
+  Object.keys(sessions).forEach(function (t) { if (sessions[t].login === login) delete sessions[t]; });
+  scheduleSessionsSave();
 }
 
 let saveTimer = null;
@@ -95,9 +125,15 @@ function related(a, b) {
 
 const subs = new Map(); // id -> { id, ws, path, segments }
 
+function isGM(ws) { return !!(ws.ctx && ws.ctx.role === 'gm'); }
+function readFor(ws, segments) {
+  const value = getAt(segments);
+  return isGM(ws) ? value : hidden.scrubAt(segments, value, getAt);
+}
+
 function sendVal(sub) {
   if (sub.ws.readyState !== 1) return;
-  const value = getAt(sub.segments);
+  const value = readFor(sub.ws, sub.segments);
   sub.ws.send(JSON.stringify({ t: 'val', id: sub.id, path: sub.path, value: value }));
 }
 
@@ -144,25 +180,51 @@ wss.on('connection', function (ws) {
       const key = connId + ':' + msg.id;
       subs.delete(key);
       localSubKeys.delete(key);
-    } else if (msg.t === 'set') {
-      const segments = splitPath(msg.path);
-      setAt(segments, msg.value === undefined ? null : msg.value);
-      scheduleSave();
-      notify(segments);
+    } else if (msg.t === 'resume') {
+      const sess = sessions[String(msg.token || '')];
+      if (sess && (sess.role === 'gm' ? isAdminLogin(sess.login) : !!users[sess.login])) {
+        ws.ctx = { login: sess.login, role: sess.role };
+        ws.send(JSON.stringify({ t: 'auth', rid: msg.rid, ok: true, login: sess.login, role: sess.role, token: msg.token }));
+      } else {
+        ws.ctx = null;
+        ws.send(JSON.stringify({ t: 'auth', rid: msg.rid, ok: false, error: 'Сессия устарела — войди заново' }));
+      }
+    } else if (msg.t === 'logout') {
+      if (msg.token && sessions[msg.token]) { delete sessions[msg.token]; scheduleSessionsSave(); }
+      ws.ctx = null;
       if (msg.rid) ws.send(JSON.stringify({ t: 'ack', rid: msg.rid }));
-    } else if (msg.t === 'update') {
+    } else if (msg.t === 'set' || msg.t === 'update') {
+      const writes = [];
+      if (msg.t === 'set') writes.push([splitPath(msg.path), msg.value === undefined ? null : msg.value]);
+      else Object.keys(msg.updates || {}).forEach(function (p) { writes.push([splitPath(p), msg.updates[p] === undefined ? null : msg.updates[p]]); });
+      const gm = isGM(ws);
       const changed = [];
-      Object.keys(msg.updates || {}).forEach(function (p) {
-        const segments = splitPath(p);
-        setAt(segments, msg.updates[p] === undefined ? null : msg.updates[p]);
+      writes.forEach(function (w) {
+        const segments = w[0];
+        /* игрок не может переписать корень или целую комнату */
+        if (!gm && segments.length < 3) return;
+        const ids = gm ? [] : hidden.charIdsTouched(segments, w[1], getAt);
+        const before = {};
+        ids.forEach(function (id) { before[id] = hidden.clone(getAt(['rooms', segments[1], 'characters', id])); });
+        setAt(segments, w[1]);
         changed.push(segments);
+        ids.forEach(function (id) {
+          const cs = ['rooms', segments[1], 'characters', id];
+          const res = hidden.restoreHidden(before[id], getAt(cs), id);
+          if (getAt(cs) !== null) setAt(cs, res.char);
+          res.events.forEach(function (ev) {
+            const es = ['rooms', segments[1], ev.node, String(Date.now()) + '_' + crypto.randomBytes(3).toString('hex')];
+            setAt(es, Object.assign({ ts: Date.now() }, ev.entry));
+            changed.push(es);
+          });
+        });
       });
       scheduleSave();
       changed.forEach(notify);
       if (msg.rid) ws.send(JSON.stringify({ t: 'ack', rid: msg.rid }));
     } else if (msg.t === 'get') {
       const segments = splitPath(msg.path);
-      ws.send(JSON.stringify({ t: 'get', rid: msg.rid, path: msg.path, value: getAt(segments) }));
+      ws.send(JSON.stringify({ t: 'get', rid: msg.rid, path: msg.path, value: readFor(ws, segments) }));
     } else if (msg.t === 'register') {
       const login = String(msg.login || '').trim();
       const password = String(msg.password || '');
@@ -177,17 +239,21 @@ wss.on('connection', function (ws) {
         users[login] = { salt: salt, hash: hashPassword(password, salt) };
         scheduleUsersSave();
       }
-      ws.send(JSON.stringify({ t: 'auth', rid: msg.rid, ok: !error, error: error, login: login, role: 'player' }));
+      let token = null;
+      if (!error) { token = newSession(login, 'player'); ws.ctx = { login: login, role: 'player' }; }
+      ws.send(JSON.stringify({ t: 'auth', rid: msg.rid, ok: !error, error: error, login: login, role: 'player', token: token }));
     } else if (msg.t === 'login') {
       const login = String(msg.login || '').trim();
       const password = String(msg.password || '');
       if (isAdminLogin(login) && password === ADMIN_PASSWORD) {
-        ws.send(JSON.stringify({ t: 'auth', rid: msg.rid, ok: true, login: ADMIN_LOGIN, role: 'gm' }));
+        ws.ctx = { login: ADMIN_LOGIN, role: 'gm' };
+        ws.send(JSON.stringify({ t: 'auth', rid: msg.rid, ok: true, login: ADMIN_LOGIN, role: 'gm', token: newSession(ADMIN_LOGIN, 'gm') }));
         return;
       }
       const u = users[login];
       const ok = !!u && hashPassword(password, u.salt) === u.hash;
-      ws.send(JSON.stringify({ t: 'auth', rid: msg.rid, ok: ok, error: ok ? null : 'Неверный логин или пароль', login: login, role: 'player' }));
+      if (ok) ws.ctx = { login: login, role: 'player' };
+      ws.send(JSON.stringify({ t: 'auth', rid: msg.rid, ok: ok, error: ok ? null : 'Неверный логин или пароль', login: login, role: 'player', token: ok ? newSession(login, 'player') : null }));
     } else if (msg.t === 'change_account') {
       const room = String(msg.room || '').trim();
       const oldLogin = String(msg.oldLogin || '').trim();
@@ -206,7 +272,12 @@ wss.on('connection', function (ws) {
       if (!error) {
         const salt = newPassword !== null ? crypto.randomBytes(16).toString('hex') : u.salt;
         const hash = newPassword !== null ? hashPassword(newPassword, salt) : u.hash;
-        if (newLogin !== oldLogin) delete users[oldLogin];
+        if (newLogin !== oldLogin) {
+          delete users[oldLogin];
+          Object.keys(sessions).forEach(function (t) { if (sessions[t].login === oldLogin) sessions[t].login = newLogin; });
+          scheduleSessionsSave();
+          if (ws.ctx && ws.ctx.login === oldLogin) ws.ctx.login = newLogin;
+        }
         users[newLogin] = { salt: salt, hash: hash };
         scheduleUsersSave();
         if (newLogin !== oldLogin && room) {
@@ -227,9 +298,10 @@ wss.on('connection', function (ws) {
       /* Удаление персонажа ГМ-ом должно полностью освобождать логин/пароль,
          иначе повторная регистрация под тем же именем падает с «логин занят». */
       const login = String(msg.login || '').trim();
-      if (login && !isAdminLogin(login) && users[login]) {
+      if (isGM(ws) && login && !isAdminLogin(login) && users[login]) {
         delete users[login];
         scheduleUsersSave();
+        dropSessionsOf(login);
       }
       if (msg.rid) ws.send(JSON.stringify({ t: 'ack', rid: msg.rid }));
     }

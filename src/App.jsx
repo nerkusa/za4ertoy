@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { db, ref, set, get, onValue, update, remove, authChangeAccount, authDeleteAccount } from './firebase';
+import { db, ref, set, get, onValue, update, remove, authChangeAccount, authDeleteAccount, authResume, authLogout, setSessionLostHandler } from './firebase';
 import { CSS } from './styles/globalCss';
 import { nC } from './utils/character';
 import { migrateChar, needsMigration } from './utils/migrate';
@@ -19,19 +19,22 @@ var WORLD="world";
 export default function App(){
 var _au=useState(null);var auth=_au[0];var setAuth=_au[1];
 var room=auth?WORLD:null;var isGM=!!(auth&&auth.role==="gm");var pId=auth?auth.login:null;
-/* Автовход из localStorage (просто запоминаем кто заходил в прошлый раз — без повторной проверки пароля, как и раньше с кодом комнаты) */
+/* Автовход: сервер проверяет сохранённый токен сессии и сам называет роль.
+   Старые сохранения без токена — войти заново. */
+var _rs=useState(function(){try{var s=JSON.parse(localStorage.getItem("zc_session")||"null");return !!(s&&s.token)}catch(e){return false}});var resuming=_rs[0];var sResuming=_rs[1];
 useEffect(function(){
-  try{
-    var saved=localStorage.getItem("zc_session");
-    if(!saved)return;
-    var s=JSON.parse(saved);
-    if(!s.login)return;
-    setAuth({login:s.login,role:s.role||"player"});
-  }catch(e){}
+  setSessionLostHandler(function(){setAuth(null);try{localStorage.removeItem("zc_session")}catch(e){}});
+  var s=null;try{s=JSON.parse(localStorage.getItem("zc_session")||"null")}catch(e){}
+  if(!s||!s.token){try{localStorage.removeItem("zc_session")}catch(e){}return}
+  authResume(s.token).then(function(res){
+    sResuming(false);
+    if(res.ok)setAuth({login:res.login,role:res.role});
+    else{try{localStorage.removeItem("zc_session")}catch(e){}}
+  });
 },[]);
 function handleAuth(a){
   setAuth(a);
-  try{localStorage.setItem("zc_session",JSON.stringify({login:a.login,role:a.role}))}catch(e){}
+  try{localStorage.setItem("zc_session",JSON.stringify({login:a.login,role:a.role,token:a.token}))}catch(e){}
 }
 var _ch=useState({});var chars=_ch[0];var sCh=_ch[1];var _lo=useState({});var lore=_lo[0];var sLo=_lo[1];var _mp=useState({});var mapData=_mp[0];var sMapData=_mp[1];var _lg=useState([]);var logs=_lg[0];var sLg=_lg[1];var _nt=useState({});var npcTempl=_nt[0];var sNpcTempl=_nt[1];var _sn=useState({});var spawned=_sn[0];var sSpawned=_sn[1];
 var _pa=useState({});var pendAtk=_pa[0];var sPendAtk=_pa[1];
@@ -119,7 +122,7 @@ function changeAccount(currentPassword,newLogin,newPassword){
   return authChangeAccount(room,auth.login,currentPassword,newLogin,newPassword).then(function(res){
     if(res.ok){
       setAuth({login:res.login,role:res.role});
-      try{localStorage.setItem("zc_session",JSON.stringify({login:res.login,role:res.role}))}catch(e){}
+      try{var old=JSON.parse(localStorage.getItem("zc_session")||"{}");localStorage.setItem("zc_session",JSON.stringify({login:res.login,role:res.role,token:old.token}))}catch(e){}
     }
     return res;
   })
@@ -128,8 +131,10 @@ function leave(){
   if(!window.confirm("Выйти?"))return;
   setAuth(null);sCh({});sLo({});sLg([]);
   try{localStorage.removeItem("zc_session")}catch(e){}
+  authLogout();
 }
 var _sd=useState(false);var showDonate=_sd[0];var sShowDonate=_sd[1];var _sb2=useState(false);var showBestApp=_sb2[0];var sShowBestApp=_sb2[1];
+if(!auth&&resuming)return <div style={{padding:20,textAlign:"center",color:"#cfc6b2"}}>Подключение…</div>;
 if(!auth)return <Login onAuth={handleAuth}/>;
 /* Персонажи читаются уже в схеме v3 (migrateChar); сохраняет миграцию только сам игрок */
 var ca=Object.entries(chars).map(function(e){return Object.assign({},migrateChar(e[1]),{_fbId:e[0]})});

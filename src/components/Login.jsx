@@ -17,7 +17,7 @@ function doLogin(){
   authLogin(lg.trim(),ps).then(function(res){
     sL(false);
     if(!res.ok){sE(res.error||"Не удалось войти");return}
-    pr.onAuth({login:res.login,role:res.role});
+    pr.onAuth({login:res.login,role:res.role,token:res.token});
   });
 }
 function doRegister(){
@@ -27,7 +27,7 @@ function doRegister(){
   authRegister(lg.trim(),ps).then(function(res){
     sL(false);
     if(!res.ok){sE(res.error||"Не удалось зарегистрироваться");return}
-    pr.onAuth({login:res.login,role:res.role});
+    pr.onAuth({login:res.login,role:res.role,token:res.token});
   });
 }
 function onKeyDown(e){if(e.key==="Enter"){md==="login"?doLogin():doRegister()}}

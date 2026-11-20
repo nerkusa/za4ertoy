@@ -24,6 +24,8 @@ import ProfEditor from './ProfEditor';
 import ShopEditor from './ShopEditor';
 import GearEditor from './GearEditor';
 import VehiclesPanel from './VehiclesPanel';
+import CassetteGrant from './CassetteGrant';
+import { endSessionRolls, cassDef, cassLabel } from '../../utils/cassettes';
 import FactionsPanel from './FactionsPanel';
 
 const NAV = [
@@ -45,13 +47,11 @@ function GrantBox(pr) {
   const c = pr.char;
   const [gc, setGc] = useState('weapon');
   const [id, setId] = useState('');
-  const [kind, setKind] = useState('copy');
   const list = (pr.shop || []).filter(function (i) { return gc === 'item' ? (i.cat === 'item' || i.cat === 'tool') : i.cat === gc; });
   const it = list.find(function (i) { return i.id === id; });
-  const def = it && it.cat === 'cassette' ? findBy(getTraits().cassettes, it.gearKey) : null;
   function give() {
     if (!it) return;
-    const opts = { kind: kind };
+    const opts = {};
     const p = grantPatch(c, getTraits(), it, opts);
     if (p.error) { alert(p.error); return; }
     pr.saveChar(c._fbId, Object.assign({}, c, p));
@@ -63,11 +63,11 @@ function GrantBox(pr) {
       <span className="lblm">Выдача из каталога</span>
       <div className="row">
         <select value={gc} onChange={function (e) { setGc(e.target.value); setId(''); }}>{GRANT_CATS.map(function (g) { return <option key={g[0]} value={g[0]}>{g[1]}</option>; })}</select>
-        <select value={id} onChange={function (e) { setId(e.target.value); }} style={{ flex: 1, minWidth: 120 }}><option value="">— что выдать —</option>{list.map(function (i) { return <option key={i.id} value={i.id}>{i.name + (i.notForSale ? ' · не продаётся' : priceNum(i.price) ? ' · ' + fmtMoney(i.price) : '')}</option>; })}</select>
-        {gc === 'cassette' && <select value={kind} onChange={function (e) { setKind(e.target.value); }}>{CASS_KINDS.filter(function (k) { return !(def && def.origOnly) || k.id === 'orig' || k.id === 'fake'; }).map(function (k) { return <option key={k.id} value={k.id}>{k.name}</option>; })}</select>}
-        <button className="btn sm" disabled={!it} onClick={give}>Выдать</button>
+        {gc !== 'cassette' && <select value={id} onChange={function (e) { setId(e.target.value); }} style={{ flex: 1, minWidth: 120 }}><option value="">— что выдать —</option>{list.map(function (i) { return <option key={i.id} value={i.id}>{i.name + (i.notForSale ? ' · не продаётся' : priceNum(i.price) ? ' · ' + fmtMoney(i.price) : '')}</option>; })}</select>}
+        {gc !== 'cassette' && <button className="btn sm" disabled={!it} onClick={give}>Выдать</button>}
       </div>
-      {list.length === 0 && <span className="hint">В этой категории каталога пусто — добавь стартовый каталог в разделе «Каталог».</span>}
+      {gc === 'cassette' && <CassetteGrant char={c} saveChar={pr.saveChar} addLog={pr.addLog} log={pr.log} />}
+      {gc !== 'cassette' && list.length === 0 && <span className="hint">В этой категории каталога пусто — добавь стартовый каталог в разделе «Каталог».</span>}
     </div>
   );
 }
@@ -135,7 +135,7 @@ function PartyCard(pr) {
           <dt>Молва</dt><dd>{(c.molva > 0 ? '+' : '') + (c.molva || 0)}</dd>
           <dt>Опыт</dt><dd>{xpp.got + '/' + xpp.need + ' до ур.' + (xpp.level + 1) + (xpp.ready ? ' · готов' : '') + ' · награда: +1 очко навыка и +2 Здоровья'}</dd>
           <dt>Браслет</dt><dd>{b ? b.name + ' · свободно ' + ni.free + ' из ' + ni.total : 'нет'}</dd>
-          <dt>В гнёздах</dt><dd>{inNest.length ? inNest.map(function (x) { const d = findBy(cat.cassettes, x.key); return (d ? d.name : x.key) + ' (' + kindName(x.kind) + (x.kind === 'fake' && x.fakeState ? ': ' + (x.fakeState === 'silent' ? 'молчит' : x.fakeState === 'copy' ? 'как копия' : 'застряла') : '') + (x.kind === 'slep' ? ', отпечаток ' + (x.imprint || 0) + ' ' + IMPRINT_STAGES[x.imprint || 0] : '') + ')'; }).join('; ') : '—'}</dd>
+          <dt>В гнёздах</dt><dd>{inNest.length ? inNest.map(function (x) { const d = cassDef(x, cat); return cassLabel(x, d, true) + (x.kind === 'fake' && x.fakeState ? ': ' + (x.fakeState === 'silent' ? 'молчит' : x.fakeState === 'copy' ? 'как копия' : 'застряла') : '') + (x.kind === 'slep' ? ', отпечаток ' + (x.imprint || 0) + ' ' + IMPRINT_STAGES[x.imprint || 0] : '') + (x.dead ? ', испорчена' : ''); }).join('; ') : '—'}</dd>
           {(c.debts || []).length > 0 && <React.Fragment><dt>Долги</dt><dd>{c.debts.map(function (d) { return d.amount + ' ер. ' + (d.to || ''); }).join(', ')}</dd></React.Fragment>}
           {c.lifeImprint ? <React.Fragment><dt>Отпечаток</dt><dd>{'с жизненного пути: ' + c.lifeImprint}</dd></React.Fragment> : null}
           <dt>Солюшны</dt><dd>{solutionList(c, cat).map(function (x) { return x.name; }).join(', ') || '—'}{' · шагов железа: ' + steps + (stage ? ' (' + stage.name + ')' : '')}</dd>
@@ -200,6 +200,22 @@ function Overview(pr) {
     if (pr.addGmLog) pr.addGmLog({ who: pr.myName || 'ГМ', label: 'Новый день', detail: hit.length ? hit.join('; ') : 'болезни никого не тронули' });
     if (!hit.length) alert('Новый день: ежедневных потерь от болезней ни у кого нет.');
   }
+  /* Конец сессии: каждая битая кассета в браслете — d10, на 1 Пробой */
+  function endSession() {
+    if (!window.confirm('Конец сессии: бросить d10 за каждую битую кассету в браслетах?')) return;
+    const lines = [];
+    pr.characters.forEach(function (c) {
+      const r = endSessionRolls(c, function () { return r1(10); });
+      if (!r.results.length) return;
+      pr.saveChar(c._fbId, Object.assign({}, c, { cassettes: r.cassettes }));
+      r.results.forEach(function (x) {
+        lines.push((c.name || '?') + ': «' + x.title + '» d10 = ' + x.d + (x.dead ? ' — Пробой, кассета испорчена' : ''));
+        if (x.dead && pr.addLog) pr.addLog({ who: c.name || '?', type: 'noise', label: 'Пробой: кассета «' + x.title + '» испорчена', detail: 'битая кассета, конец сессии', total: 0 });
+      });
+    });
+    if (pr.addGmLog) pr.addGmLog({ who: pr.myName || 'ГМ', label: 'Конец сессии', detail: lines.length ? lines.join('; ') : 'битых кассет в браслетах нет' });
+    alert(lines.length ? 'Конец сессии:\n' + lines.join('\n') : 'Битых кассет в браслетах нет.');
+  }
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
       <h2>Отряд</h2>
@@ -207,6 +223,7 @@ function Overview(pr) {
         <input value={q} onChange={function (e) { setQ(e.target.value); }} placeholder="Поиск игрока по имени…" className="n-input" style={{ flex: '1 1 200px' }} />
         <button className="btn" onClick={restAll} disabled={pr.characters.length === 0}>Отдых всего отряда</button>
         <button className="btn" onClick={newDay} disabled={pr.characters.length === 0} title="Сибирка и Гниль: −1 Здоровья, Ожерелье: −1 Воли">Новый день</button>
+        <button className="btn" onClick={endSession} disabled={pr.characters.length === 0} title="Битые кассеты в браслетах: d10, на 1 — Пробой">Конец сессии</button>
       </div>
       <GMRoll addLog={pr.addLog} />
       {pr.characters.length === 0 && <p className="hint">Ждём игроков: они появятся здесь после регистрации.</p>}

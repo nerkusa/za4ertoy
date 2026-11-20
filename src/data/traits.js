@@ -8,6 +8,7 @@
    free_overcome_fear («Стержень»), aim_bonus («Хирург»),
    dual_wield, armor_effectiveness (остались от базы). */
 import { BRACELETS, FINE_SKILLS } from './gear';
+import { cassDef } from '../utils/cassettes';
 import { originOf } from './professions';
 import { diseaseList, IRON_FIST } from './gear';
 import { prosthesesOf } from '../utils/crits';
@@ -60,26 +61,28 @@ function nestInfo(c,cat){
 }
 /* Можно ли вставить кассету: {ok, reason} */
 function canInsert(c,cass,cat){
-  var def=findBy(cat.cassettes,cass.key);
+  var def=cassDef(cass,cat);
   if(!braceletOf(c))return{ok:false,reason:"браслета нет"};
   var ni=nestInfo(c,cat);
   if(ni.blocked)return{ok:false,reason:"Корпус: кассеты невозможны"};
   if(def&&!canRead(c,def.cls))return{ok:false,reason:"нужен "+(def.cls==="MIL"?"Military":def.cls==="UTIL"?"Utilitary или Military":"браслет")+" или перешивка у кассетника (Техника СЛ 18)"};
-  if(((c.cassettes)||[]).some(function(x){return x.inNest&&x.key===cass.key&&x.id!==cass.id}))return{ok:false,reason:"такая кассета уже стоит — дважды не складывается"};
+  if(((c.cassettes)||[]).some(function(x){return x.inNest&&x.key===cass.key&&(cass.key!=="custom"||x.title===cass.title)&&x.id!==cass.id}))return{ok:false,reason:"такая кассета уже стоит — дважды не складывается"};
   if(ni.free<=0)return{ok:false,reason:"нет свободных гнёзд"};
   return{ok:true,reason:""};
 }
 /* Работает ли вставленная кассета (палёнка — только если «завелась») */
 function cassWorks(x){
-  if(!x||!x.inNest||x.dead||x.muted)return false;
+  if(!x||!x.inNest||x.dead||x.muted||x.dud)return false;
   if(x.kind==="fake")return x.fakeState==="copy";
   return true;
 }
-/* Эффекты одной кассеты с учётом вида: слепок даёт +3 вместо +2 */
+/* Эффекты одной кассеты с учётом вида: слепок даёт +3 вместо +2;
+   затёртая и битая — бонус −1, но не ниже +1 */
 function cassEffects(x,def){
   return (def.effects||[]).map(function(e){
     var o=Object.assign({},e);
     if(x.kind==="slep"&&e.type==="skill_bonus"&&(e.amount||0)>=2)o.amount=(e.amount||0)+1;
+    if((x.condition==="worn"||x.condition==="broken")&&(o.type==="skill_bonus"||o.type==="stat_bonus")&&(o.amount||0)>1)o.amount=o.amount-1;
     return o;
   });
 }
@@ -90,9 +93,10 @@ function activeTraitEffects(c,cat){
   var out=[];if(!c)return out;cat=cat||{};
   var seen={};
   if(!nestInfo(c,cat).blocked)(c.cassettes||[]).forEach(function(x){
-    if(!cassWorks(x)||seen[x.key])return;
-    var def=findBy(cat.cassettes,x.key);if(!def||!canRead(c,def.cls))return;
-    seen[x.key]=true;
+    var sk=x.key==="custom"?"custom:"+(x.title||x.id):x.key;
+    if(!cassWorks(x)||seen[sk])return;
+    var def=cassDef(x,cat);if(!def||!canRead(c,def.cls))return;
+    seen[sk]=true;
     cassEffects(x,def).forEach(function(e){out.push(Object.assign({},e,{src:{from:"cassette",id:x.id,key:x.key,name:def.name,kind:x.kind==="fake"?"copy":x.kind}}))});
   });
   var s=c.solutions||{};var pr=prosthesesOf(c);

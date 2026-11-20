@@ -14,7 +14,8 @@ function withWeapons(c,cat,patch){
 }
 function addCassette(c,cat,key,kind){
   var def=findBy(cat.cassettes,key);if(!def)return{error:"Нет такой кассеты в каталоге"};
-  var x={id:uid(),key:key,kind:kind||"copy",inNest:false,imprint:0};
+  var x={id:uid(),key:key,kind:kind||"copy",inNest:false,imprint:0,title:def.name,cls:def.cls,capacity:kind==="slep"?128:def.cap,condition:"good",year:""};
+  if(kind==="fake")x.fakeAs="orig";
   return{cassettes:(c.cassettes||[]).concat([x])};
 }
 function sol(c){return Object.assign({arm:null,leg:null,implants:[],addons:[]},c.solutions||{})}
