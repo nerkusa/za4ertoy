@@ -112,4 +112,5 @@ cd /opt/zachertoy-companion/server && sudo npm install --omit=dev && sudo system
 ## Резервная копия
 
 Два файла: `/var/lib/zachertoy/data.json` (мир) и
-`/var/lib/zachertoy/users.json` (логины, пароли хешированы).
+`/var/lib/zachertoy/users.json` (логины, пароли хешированы). Рядом
+`sessions.json` — входы игроков; без него все просто войдут заново.

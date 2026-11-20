@@ -26,7 +26,10 @@ realtime-сервер на WebSocket. Основа — Nox Aeterna (`nerkusa/nox
    ```
    Слушает `ws://localhost:8788`. Данные — в `server/data.json` и
    `server/users.json`; пути меняются переменными `DATA_FILE` и `USERS_FILE`,
-   порт — `PORT`.
+   порт — `PORT`. Сессии входа лежат рядом с `users.json` в `sessions.json`.
+   Роль соединения (мастер или игрок) сервер берёт из сессии и не отдаёт
+   игроку скрытое: настоящий вид палёнки, карту героя, журнал мастера
+   (`server/hidden.js`).
 
 2. Клиент:
    ```
