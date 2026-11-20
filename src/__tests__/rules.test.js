@@ -587,3 +587,26 @@ describe('слепок ест Выдержку', function(){
     expect(vydOf(Object.assign({},cl,p))).toBe(3);
   });
 });
+
+/* ── v4, п.18–19 ── */
+import { buildShopDefaults as bsd } from '../data/shopDefaults';
+import { grantPatch } from '../utils/grant';
+import { buildNpcDefaults as bnd, GROUP_HINTS } from '../data/npcDefaults';
+describe('новое оружие, броня, бестиарий', function(){
+  test('магазин', function(){
+    var all=bsd();var f=function(n){return all.find(function(i){return i.name===n})};
+    expect(f('«Швейка», пистолет-пулемёт').clip).toBe(30);expect(f('«Швейка», пистолет-пулемёт').mag).toBeUndefined();
+    expect(f('Крышка бочки').cat).toBe('shield');expect(f('Крышка бочки').slot).toBeUndefined();
+    expect(f('Щит дорожника').notForSale).toBe(true);
+    expect(f('Шлем-горшок').slot).toBe('head');expect(f('Химза').desc).toContain('Доза');
+    var w=grantPatch({weapons:[]},CAT,f('«Ведро», помповый дробовик'),{}).weapons[0];expect(w.clip).toBe(6);expect(w.hands).toBe(2);
+  });
+  test('бестиарий', function(){
+    var d=bnd();var names=function(g){return Object.values(d[g]).filter(function(x){return x&&x.name}).map(function(x){return x.name})};
+    expect(names('Твари')).toEqual(expect.arrayContaining(['Пересмешник','Мошкара','Сохатый','Щука','Гнилой']));
+    expect(names('Люди тракта')).toEqual(expect.arrayContaining(['Охотник за головами','Ойуун','Технойуун']));
+    var st=Object.values(d['Именные']).find(function(x){return x.name==='Старик (Пересмешник)'});expect(st.xpReward).toBe(180);
+    var g=Object.values(d['Твари']).find(function(x){return x.name==='Гнилой'});expect(g.xpReward).toBe(18);
+    expect(GROUP_HINTS['Твари']).toContain('юёр');
+  });
+});

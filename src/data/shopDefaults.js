@@ -4,11 +4,42 @@ import { CASSETTES, TIPS, LEG_TIPS, IMPLANTS, ARM_PRICE, LEG_PRICE, HVATKA_PRICE
 
 /* Стартовый каталог «За Чертой · 2035». Цены — в полисных еврорублях.
    notForSale — купить нельзя, выдаёт только мастер. */
-function wp(name,wtype,dmgDice,bonus,dmgType,price,extra){return Object.assign({cat:'weapon',name:name,wtype:wtype,dmgDice:dmgDice,bonus:bonus||0,dmgType:dmgType,hands:1,price:price==null?0:price,notForSale:price==null,desc:''},extra||{})}
-function ar(name,slot,type,hp,price){return{cat:'armor',name:name,slot:slot,type:type,hp:hp,price:price==null?0:price,notForSale:price==null,desc:''}}
+/* extra.mag — ёмкость магазина (= clip) */
+function wp(name,wtype,dmgDice,bonus,dmgType,price,extra){var o=Object.assign({cat:'weapon',name:name,wtype:wtype,dmgDice:dmgDice,bonus:bonus||0,dmgType:dmgType,hands:1,price:price==null?0:price,notForSale:price==null,desc:''},extra||{});if(o.mag){o.clip=o.mag;delete o.mag}return o}
+/* slot 'shield' — щит (тип light/medium/tower) */
+function ar(name,slot,type,hp,price,extra){var o=Object.assign({cat:slot==='shield'?'shield':'armor',name:name,type:type,hp:hp,price:price==null?0:price,notForSale:price==null,desc:''},slot==='shield'?{}:{slot:slot},extra||{});return o}
 
 function buildShopDefaults() {
   const items = [
+    // ── ТЗ v4, п.18: только для приложения ──
+    // холодное и рукопашное
+    wp('Нож-свежевальник «Скорняк»','Simple','1d6',1,'Р',20,{desc:'Снять шкуру или кожу вдвое быстрее'}),
+    wp('Кистень «Гирька»','Simple','1d6',2,'Д',25,{desc:'Против щита: щит принимает на четверть меньше'}),
+    wp('Пешня «Долбёжка»','Battle','2d6',0,'К',30,{hands:2,desc:'Ломает лёд, двери, черепа. ×2 урона по прочности двери'}),
+    wp('Рельса','Battle','3d6',1,'Д',0,{hands:2,desc:'Нужно Тело 8. Валяется у любой насыпи. −2 к Уклонению, пока в руках'}),
+    wp('Газовый резак «Сварка»','Battle','2d6',2,'Д',140,{charges:3,desc:'Баллон на 3 удара. Поджигает: 1d6 в раунд. Режет замки и решётки за минуту'}),
+    // стрелковое
+    wp('«Мелкашка», малокалиберка','Guns','1d6',2,'П',60,{hands:2,mag:10,desc:'Тихая: выстрел не слышно дальше 100 м. Патрон 0,5 ер.'}),
+    wp('«Шило», пневматика','Guns','1d6',0,'К',40,{hands:2,mag:20,desc:'Бесшумная. Пульки дешёвые: 100 шт. — 2 ер.'}),
+    wp('«Швейка», пистолет-пулемёт','Guns','2d6',1,'П',350,{mag:30,desc:'Очередь: две атаки за ход, каждая с −2. Расход 5 патронов'}),
+    wp('«Ведро», помповый дробовик','Guns','3d6',1,'П',300,{hands:2,mag:6,desc:'В упор (до 5 м) +1d6. Дальше 30 м −2'}),
+    wp('«Прадед», винтовка-болтовка','Guns','4d6',0,'П',500,{hands:2,mag:5,desc:'Довоенная, вечная. Перезарядка затвора: один выстрел за ход'}),
+    // метательное и ловушки
+    wp('Сеть «Невод»','Thrown','—',0,'—',15,{consumable:true,desc:'Цель опутана: −4 к атаке и Уклонению. Выпутаться: Атлетика СЛ 14'}),
+    wp('Растяжка-самострел','Thrown','2d6',0,'К',20,{consumable:true,desc:'Ставится за минуту. Заметить: Внимательность СЛ 14'}),
+    wp('«Звонок», шумовая граната','Thrown','—',0,'—',30,{consumable:true,desc:'Все в 10 м: Тело СЛ 12 или глухота и −2 ко всему на 2 раунда. Глушит Пересмешника на 2 раунда'}),
+    // броня тела
+    ar('Покрышечный доспех','body','light',10,70,{desc:'Нарезан из шин. Резиновый: удар током не проходит'}),
+    ar('Кольчуга из рабицы','body','medium',14,140,{desc:'Р и К по ней — как по средней, а весит как лёгкая: штраф Уклонения −1 вместо −3'}),
+    ar('Химза','body','light',4,90,{desc:'Защитный костюм: Доза от пыли, дождя и земли копится вдвое медленнее. С противогазом — втрое'}),
+    ar('Довоенный бронежилет','body','medium',24,500,{desc:'Редкость. Продаётся только на барахолке Мирного'}),
+    // голова
+    ar('Пожарная каска','head','light',10,40,{desc:'Огонь по голове вдвое слабее'}),
+    ar('Хоккейная маска','head','light',6,15,{desc:'Лицо закрыто: −2 к попыткам узнать тебя'}),
+    ar('Шлем-горшок','head','medium',14,110,{desc:'Глухой, сваренный из газового баллона. −2 к Внимательности'}),
+    // щиты
+    ar('Крышка бочки','shield','light',8,10),
+    ar('Щит дорожника','shield','medium',22,0,{notForSale:true,desc:'Не продаётся. С таким щитом на посту — вопрос к тебе'}),
     // ── Оружие ──
     wp('Якутский нож (быһах)','Simple','1d6',0,'К',15),
     wp('Тесак «Пила»','Battle','1d6',1,'Р',15),
