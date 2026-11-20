@@ -47,6 +47,7 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid 
 .bar i.warn{background:var(--rust)}
 .bar b{position:absolute;top:-3px;bottom:-3px;width:2px;background:var(--ink)}
 .pips{display:flex;gap:3px}
+.burnp{display:inline-flex;gap:2px;margin-left:6px;vertical-align:middle}.burnp i{width:7px;height:11px;border:1px solid var(--ink);background:var(--ink)}.burnp i.x{border-color:var(--rust);background:linear-gradient(to top right,transparent 42%,var(--rust) 42%,var(--rust) 58%,transparent 58%)}
 .pips button{flex:1;height:16px;border:1px solid var(--ink);background:var(--paper);padding:0;min-width:0}
 .pips button.on{background:var(--rust)}
 .pips button.on.lo{background:#b7963d}

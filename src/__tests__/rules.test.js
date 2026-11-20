@@ -559,3 +559,31 @@ describe('кассеты v4', function(){
     expect(endSessionRolls(c,function(){return 2}).cassettes[0].dead).toBeUndefined();
   });
 });
+
+/* ── v4, п.20: выгорание Выдержки ── */
+import { burnOnFail, slepDecision, vydOf, restoreState, restorePatch } from '../utils/slep';
+describe('слепок ест Выдержку', function(){
+  var base=function(o){return Object.assign({name:'Тест',level:2,skills:{'Выдержка':4},skillPts:3,cassettes:[{id:'s',kind:'slep',inNest:true,imprint:4,donor:'Тропарь'}]},o||{})};
+  test('провал при Отпечатке 4 сжигает очко', function(){
+    var c=base();var b=burnOnFail(c,c.cassettes[0],4);
+    expect(b.patch.burned).toBe(1);expect(b.text).toBe('Слепок «Тропарь» съел очко Выдержки (осталось 3)');
+    expect(burnOnFail(c,c.cassettes[0],3)).toBeNull();
+  });
+  test('эффект на листе и захват при нуле', function(){
+    var c=base({burned:2});expect(cF(c).eSk['Выдержка']).toBe(2);
+    expect(slepDecision(c)).toBeNull();
+    var z=slepDecision(base({burned:4}));expect(z.type).toBe('zero');expect(z.donor).toBe('Тропарь');
+  });
+  test('Край: сплав только при Выдержке ≥3', function(){
+    var c=base({cassettes:[{id:'s',kind:'slep',inNest:true,imprint:5,donor:'Т'}]});
+    expect(slepDecision(c).fusion).toBe(true);
+    expect(slepDecision(Object.assign({},c,{burned:2})).fusion).toBe(false);
+  });
+  test('восстановить — после чистки, раз за уровень', function(){
+    var c=base({burned:2});expect(restoreState(c).show).toBe(false);
+    var cl=base({burned:2,cassettes:[]});expect(restoreState(cl).ok).toBe(true);
+    var p=restorePatch(cl);expect(p).toEqual({burned:1,skillPts:1,vydRestoredAt:2});
+    expect(restoreState(Object.assign({},cl,p)).ok).toBe(false);
+    expect(vydOf(Object.assign({},cl,p))).toBe(3);
+  });
+});

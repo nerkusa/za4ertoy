@@ -3,6 +3,7 @@ import { cF } from '../../utils/character';
 import { getTraits } from '../../utils/traitStore';
 import { BRACELETS, NOISE, IMPRINT_STAGES, CASS_KINDS, kindName } from '../../data/gear';
 import { cassDef, cassLabel, salePrice, CONDITIONS, condName } from '../../utils/cassettes';
+import { burnOnFail } from '../../utils/slep';
 import { nestInfo, canInsert, solutionList, cassEffects, hasTablet } from '../../data/traits';
 import { fakeOutcome, slepCheck, slepDC, inCombat } from '../../utils/gearFx';
 import { patchFromShopItem } from '../../utils/gearOps';
@@ -46,12 +47,22 @@ function eject(x){
   upd(x.id,{inNest:false,stuck:false,fakeState:null});
   log({type:"gear",label:"Вынул кассету «"+def.name+"»"});
 }
-function stability(x){
+/* Проверка стойкости слепка; scary — страшная сцена при Отпечатке 4+ (СЛ 16).
+   При Отпечатке 4–5 провал сжигает очко Выдержки навсегда (п.20). */
+function stability(x,scary){
   var def=cassDef(x,cat);var d=r1(10);var res=slepCheck(c,inf,x.id,d);
-  upd(x.id,{imprint:res.imprint});
-  log({type:"skill",label:"Стойкость слепка «"+def.name+"» — "+(res.ok?"устоял":"провал"),detail:"d10("+d+") + Воля + Выдержка"+(res.others?" − 2×"+res.others+" (другие слепки)":"")+" = "+res.total+(gm||tablet?" против СЛ "+res.dc:""),total:res.total});
-  if(!res.ok)gmLog("Слепок «"+def.name+"»: Отпечаток +1","теперь "+res.imprint+" — "+IMPRINT_STAGES[res.imprint]);
-  if(pr.onRoll)pr.onRoll({label:"Стойкость слепка",d10:d,parts:[{label:"Воля",value:inf.fs.volya||0},{label:"Выдержка",value:inf.eSk["Выдержка"]||0}].concat(res.others?[{label:"Слепки",value:-2*res.others}]:[]),total:res.total,subtext:res.ok?"Устоял":"Провал — плёнка берёт своё"});
+  var imp0=x.imprint||0;
+  if(scary){res=Object.assign({},res,{dc:16,ok:res.total>=16,imprint:imp0})}
+  var patch={cassettes:cass.map(function(k){return k.id===x.id?Object.assign({},k,{imprint:res.imprint}):k})};
+  var burn=res.ok?null:burnOnFail(c,x,imp0);
+  if(burn)Object.assign(patch,burn.patch);
+  sv(Object.assign({},c,patch));
+  var nm=scary?"Страшная сцена: стойкость слепка «"+def.name+"»":"Стойкость слепка «"+def.name+"»";
+  log({type:"skill",label:nm+" — "+(res.ok?"устоял":"провал"),detail:"d10("+d+") + Воля + Выдержка"+(res.others?" − 2×"+res.others+" (другие слепки)":"")+" = "+res.total+(gm||tablet||scary?" против СЛ "+res.dc:""),total:res.total});
+  if(burn)setTimeout(function(){log({type:"noise",label:burn.text})},10);
+  if(!res.ok&&!scary)gmLog("Слепок «"+def.name+"»: Отпечаток +1","теперь "+res.imprint+" — "+IMPRINT_STAGES[res.imprint]);
+  if(!res.ok&&scary)gmLog("Слепок «"+def.name+"»: страшная сцена провалена","до конца сцены телом распоряжается донор");
+  if(pr.onRoll)pr.onRoll({label:scary?"Страшная сцена":"Стойкость слепка",d10:d,parts:[{label:"Воля",value:inf.fs.volya||0},{label:"Выдержка",value:inf.eSk["Выдержка"]||0}].concat(res.others?[{label:"Слепки",value:-2*res.others}]:[]),total:res.total,subtext:(res.ok?"Устоял":scary?"Провал — до конца сцены телом распоряжается донор":"Провал — плёнка берёт своё")+(burn?"\n"+burn.text:"")});
 }
 function buy(it){var pay=tryPay(c,it.price);if(pay===null)return;var p=patchFromShopItem(c,cat,it);if(p.error){alert(p.error);return}sv(Object.assign({},c,pay,p));log({type:"gear",label:"Купил: "+it.name})}
 
@@ -86,9 +97,11 @@ function CassCard(x,inNest){
     {x.muted&&<span className="t" style={{color:"#e07a5a"}}>молчит до конца сцены</span>}
     {x.dud&&<span className="t" style={{color:"#e07a5a"}}>молчит</span>}
     <span className="t">{"Цена при продаже: "+price+" ер."}</span>
-    {x.kind==="slep"&&inNest&&<button className="btn sm" onClick={function(){stability(x)}}>{"Стойкость"+(gm||tablet?" · СЛ "+slepDC(x.imprint):"")}</button>}
+    {x.kind==="slep"&&inNest&&!x.fused&&<button className="btn sm" onClick={function(){stability(x)}}>{"Стойкость"+(gm||tablet?" · СЛ "+slepDC(x.imprint):"")}</button>}
+    {x.kind==="slep"&&inNest&&!x.fused&&(x.imprint||0)>=4&&<button className="btn sm" title="Сцена, где страшно или больно" onClick={function(){stability(x,true)}}>Страшная сцена · СЛ 16</button>}
+    {x.fused&&<span className="t" style={{color:"#f0d79a"}}>Сплав: донор и носитель — одно</span>}
     {inNest
-      ?<button className="btn sm" disabled={fighting||(x.stuck&&!gm)} onClick={function(){eject(x)}}>Вынуть</button>
+      ?<button className="btn sm" disabled={fighting||((x.stuck||x.fused)&&!gm)} onClick={function(){eject(x)}}>Вынуть</button>
       :<button className="btn sm" disabled={fighting||!chk.ok} title={chk.reason} onClick={function(){insert(x)}}>Вставить</button>}
     {!inNest&&!chk.ok&&<span className="t" style={{color:"#f0d79a"}}>{chk.reason}</span>}
     {gm&&<div style={{display:"flex",gap:4,flexWrap:"wrap",borderTop:"1px dashed #4a4236",paddingTop:5}}>

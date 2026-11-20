@@ -7,6 +7,7 @@ import { fineBlocked } from '../../data/traits';
 import { diseaseList } from '../../data/gear';
 import { getTraits } from '../../utils/traitStore';
 import { IconD10 } from '../../icons/index';
+import { VYD, burnedOf, restoreState, restorePatch } from '../../utils/slep';
 
 /* Вкладка «Навыки»: проверки характеристик и навыков против СЛ.
    итог = характеристика + навык + эффекты + штрафы + d10 (rollHit). */
@@ -85,12 +86,13 @@ return(<div key={st.key} className="stat" style={{borderTopColor:st.color}}>
 var canMinus=free||(c.locked&&(c.skills[s.name]||0)>((c.lockedSkills&&c.lockedSkills[s.name])||0));var canPlus=draft?(skLeft>=skCost(s.name)&&(c.skills[s.name]||0)<skillCap(c.origin,s.name)):(free||pts>=skCost(s.name));
 return(<div key={s.name} style={{display:"flex",alignItems:"center"}}>
 <button className="sk" onClick={function(){roll(st.key,s.name)}}>
-<span>{s.name}{skCost(s.name)>1&&<em className="mono" style={{color:"var(--rust)",fontSize:11,marginLeft:4,fontStyle:"normal"}}>×2</em>}{blocked&&<em style={{color:"var(--rust)",fontSize:11,marginLeft:6}}>тонкая работа невозможна</em>}</span>
+<span>{s.name}{s.name===VYD&&burnedOf(c)>0&&<span className="burnp" title={"Слепок съел "+burnedOf(c)+" — красные перечёркнутые"}>{Array.from({length:Math.max((c.skills||{})[VYD]||0,burnedOf(c))}).map(function(_,i,arr){return <i key={i} className={i>=arr.length-burnedOf(c)?"x":""}/>})}</span>}{skCost(s.name)>1&&<em className="mono" style={{color:"var(--rust)",fontSize:11,marginLeft:4,fontStyle:"normal"}}>×2</em>}{blocked&&<em style={{color:"var(--rust)",fontSize:11,marginLeft:6}}>тонкая работа невозможна</em>}</span>
 <span className="bon">{bon}</span>
 <span className="tot">{v+ev}<em>{" ("+v+"+"+ev+")"}</em></span>
 </button>
 {(free||pts>0||canMinus&&c.locked&&!isGM&&hasUnlocked)&&<span className="pm" style={{marginRight:8}}><button disabled={!canMinus} onClick={function(){uSk(s.name,-1)}}>−</button><button disabled={!canPlus} onClick={function(){uSk(s.name,1)}}>+</button></span>}
 </div>)})}
+{st.key==="volya"&&(function(){var rs=restoreState(c);if(!rs.show||isGM&&!rs.ok)return null;return <div className="row" style={{padding:"4px 8px"}}><button className="btn sm" disabled={!rs.ok} title={rs.ok?"Вернуть очко Выдержки за "+rs.cost+" очка навыков":rs.reason} onClick={function(){var p=restorePatch(c);if(!p)return;sv(Object.assign({},c,p));if(pr.addLog)pr.addLog({who:c.name||"???",type:"gear",label:"Восстановил очко Выдержки",detail:"сгоревших осталось "+p.burned,total:0})}}>Восстановить Выдержку</button>{!rs.ok&&<span className="hint" style={{fontSize:12}}>{rs.reason}</span>}</div>})()}
 </div>
 </div>)})}
 </div>

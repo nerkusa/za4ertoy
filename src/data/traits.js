@@ -91,6 +91,9 @@ function cassEffects(x,def){
    (нужно для шума кассет и износа насадки). */
 function activeTraitEffects(c,cat){
   var out=[];if(!c)return out;cat=cat||{};
+  /* Выдержка, съеденная слепком (п.20), — не ниже нуля купленной */
+  var burn=Math.min(c.burned||0,(c.skills&&c.skills["Выдержка"])||0);
+  if(burn>0)out.push({type:"skill_bonus",skill:"Выдержка",amount:-burn,src:{from:"burned",name:"съедено слепком"}});
   var seen={};
   if(!nestInfo(c,cat).blocked)(c.cassettes||[]).forEach(function(x){
     var sk=x.key==="custom"?"custom:"+(x.title||x.id):x.key;

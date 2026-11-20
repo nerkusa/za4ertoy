@@ -25,6 +25,7 @@ import ShopEditor from './ShopEditor';
 import GearEditor from './GearEditor';
 import VehiclesPanel from './VehiclesPanel';
 import CassetteGrant from './CassetteGrant';
+import SlepDecision from './SlepDecision';
 import { endSessionRolls, cassDef, cassLabel } from '../../utils/cassettes';
 import FactionsPanel from './FactionsPanel';
 
@@ -121,6 +122,7 @@ function PartyCard(pr) {
           <button className={'btn sm' + (c.active ? ' main' : '')} onClick={function () { save({ active: !c.active }); }}>{c.active ? 'В игре' : 'В игру'}</button>
           <button className="btn sm" onClick={function () { pr.onOpen(c._fbId); }}>Открыть лист</button>
           {!c.locked && <span className="pill">черновик</span>}
+          {c.captured && <span className="pill" style={{ borderColor: 'var(--rust)', color: 'var(--rust)' }}>{'захвачен: ' + (c.captured.by || '?')}</span>}
           {steps >= 5 && <span className="pill" title="Игрок без планшета видит Здоровье словами">немота</span>}
         </div>
         <div>
@@ -294,12 +296,13 @@ function GMPanel(pr) {
   const [showDonate, setShowDonate] = useState(false);
 
   const sel = pr.characters.find(function (c) { return c._fbId === sid; });
-  if (sel) return <GameView char={sel} save={function (d) { pr.saveChar(sel._fbId, d); }} onBack={function () { setSid(null); }} isGM={true} logs={pr.logs} addLog={pr.addLog} addGmLog={pr.addGmLog} chat={pr.chat} sendChat={pr.sendChat} lore={pr.lore} mapData={pr.mapData} saveMap={pr.saveMap} characters={pr.characters} spawned={pr.spawned} saveSpawned={pr.saveSpawned} pendAtk={pr.pendAtk} clearPendingAttack={pr.clearPendingAttack} room={pr.roomCode} savePendingAttack={pr.savePendingAttack} saveNpcHit={pr.saveNpcHit} shop={pr.shop} initiative={pr.initiative} saveInitiative={pr.saveInitiative} traits={pr.traits} factions={pr.factions} />;
+  if (sel) return <React.Fragment><SlepDecision characters={pr.characters} saveChar={pr.saveChar} npcTempl={pr.npcTempl} saveNpcTempl={pr.saveNpcTempl} addLog={pr.addLog} addGmLog={pr.addGmLog} myName={pr.myName} /><GameView char={sel} save={function (d) { pr.saveChar(sel._fbId, d); }} onBack={function () { setSid(null); }} isGM={true} logs={pr.logs} addLog={pr.addLog} addGmLog={pr.addGmLog} chat={pr.chat} sendChat={pr.sendChat} lore={pr.lore} mapData={pr.mapData} saveMap={pr.saveMap} characters={pr.characters} spawned={pr.spawned} saveSpawned={pr.saveSpawned} pendAtk={pr.pendAtk} clearPendingAttack={pr.clearPendingAttack} room={pr.roomCode} savePendingAttack={pr.savePendingAttack} saveNpcHit={pr.saveNpcHit} shop={pr.shop} initiative={pr.initiative} saveInitiative={pr.saveInitiative} traits={pr.traits} factions={pr.factions} /></React.Fragment>;
 
   const backToOverview = function () { setSection('overview'); };
 
   return (
     <div className="gm-shell">
+      <SlepDecision characters={pr.characters} saveChar={pr.saveChar} npcTempl={pr.npcTempl} saveNpcTempl={pr.saveNpcTempl} addLog={pr.addLog} addGmLog={pr.addGmLog} myName={pr.myName} />
       {showDonate && <DonatePage onClose={function () { setShowDonate(false); }} isGM={true} saveMap={pr.saveMap} mapData={pr.mapData} />}
       <nav className="gm-nav">
         {NAV.map(function (n) { return <button key={n.id} className={section === n.id ? 'on' : ''} onClick={function () { setSection(n.id); }}>{n.icon}<span>{n.label}</span></button>; })}
