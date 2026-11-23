@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { db, ref, set } from '../firebase';
 import { getTraits } from '../utils/traitStore';
-import { periods, rollRoots, rollInner, rollPeriod, applyLifepath } from '../utils/lifepath';
+import { periods, rollRoots, rollInner, rollPeriod, applyLifepath, rollExtra } from '../utils/lifepath';
+import { EXTRA_TABLES } from '../data/lifepathExtra';
 import { LIFE_SKILL_CAP, LIFE_MONEY_CAP } from '../data/lifepath';
 import { yearsWord } from '../utils/creation';
 
@@ -10,7 +11,7 @@ import { yearsWord } from '../utils/creation';
    Перебросить можно только с разрешения мастера (c.lifepathReroll). */
 function LifepathStep(pr){
 var c=pr.char;var sv=pr.save;var cat=getTraits();
-var _lp=useState(function(){return Object.assign({roots:[],inner:[],years:[]},c.lifepath||{})});var lp=_lp[0];var sLp=_lp[1];
+var _lp=useState(function(){return Object.assign({roots:[],inner:[],years:[],extra:[]},c.lifepath||{})});var lp=_lp[0];var sLp=_lp[1];
 var reroll=!!c.lifepathReroll;
 var per=periods(c.origin,c.age);
 function put(n){sLp(n);sv(Object.assign({},c,{lifepath:n}))}
@@ -45,6 +46,12 @@ return(<div className="zc-main"><div className="zc-scroll">
     {lp.roots.length>0&&<div className="log">{lp.roots.map(function(r){return <Row key={r.key} title={r.title+" · "+r.n}>{r.t}</Row>})}</div>}</div>
   <div className="sec"><div className="row" style={{justifyContent:"space-between"}}><h3>Кто ты внутри</h3>{sectionBtn("Кто ты внутри",lp.inner.length>0,function(){put(Object.assign({},lp,{inner:rollInner()}))})}</div>
     {lp.inner.length>0&&<div className="log">{lp.inner.map(function(r){return <Row key={r.key} title={r.title+" · "+r.n}>{r.t}</Row>})}</div>}</div>
+  <div className="sec"><h3>Штрихи · по желанию</h3>
+    <p className="hint">Примета, привычка, памятная вещь, секрет, слухи, страх. Это только история, без механики, и в рулбуке этих таблиц нет — бросай, если хочется.</p>
+    <div className="log">{EXTRA_TABLES.map(function(tb){var r=(lp.extra||[]).find(function(x){return x.key===tb.key});
+      return <div key={tb.key} className="logrow" style={{gridTemplateColumns:"110px 1fr auto"}}><span className="tm">{tb.title+(r?" · "+r.n:"")}</span><span>{r?r.t:<span className="hint">не брошено</span>}</span>
+        <button className="btn sm" disabled={!!r&&!reroll} onClick={function(){var n=rollExtra(tb.key);put(Object.assign({},lp,{extra:(lp.extra||[]).filter(function(x){return x.key!==tb.key}).concat([n])}))}}>{r?"Заново":"Бросить"}</button></div>})}</div>
+  </div>
   <div className="sec"><h3>{"Годы · пятилеток: "+per.length}</h3>
     <p className="hint">{c.origin==="pre"?"Довоенный: с пятнадцати лет до 2012-го — «Довоенные годы», потом четыре броска «После ударов».":"Послевоенный: за каждые пять полных лет; первые два — «Детство», остальные — «После ударов»."}{" 1–4 удача или беда, 5–7 друг или враг, 8–9 любовь, 10 тихие годы."}</p>
     <div className="log">{per.map(function(p,i){var ev=lp.years[i];var tbl=p.table==="child"?"детство":p.table==="pre"?"довоенные":"после ударов";

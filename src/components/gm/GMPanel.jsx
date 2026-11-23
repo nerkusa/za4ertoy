@@ -11,7 +11,7 @@ import { grantPatch, grantLabel } from '../../utils/grant';
 import { rollTrinket } from '../../data/trinkets';
 import { r1 } from '../../utils/dice';
 import { fmtMoney, priceNum } from '../../utils/currency';
-import { IconCards, IconCar, IconFlag, IconParty, IconChat, IconHistory, IconSkull, IconShop, IconGear, IconChar, IconLib } from '../../icons/index';
+import { IconD10, IconCards, IconCar, IconFlag, IconParty, IconChat, IconHistory, IconSkull, IconShop, IconGear, IconChar, IconLib } from '../../icons/index';
 import BestiaryEditor from './BestiaryEditor';
 import DonatePage from './DonatePage';
 import GameView from '../GameView';
@@ -26,6 +26,7 @@ import GearEditor from './GearEditor';
 import VehiclesPanel from './VehiclesPanel';
 import GaragePanel from './GaragePanel';
 import DeckPanel from './DeckPanel';
+import TablesPanel from './TablesPanel';
 import CassetteGrant from './CassetteGrant';
 import SlepDecision from './SlepDecision';
 import { endSessionRolls, cassDef, cassLabel } from '../../utils/cassettes';
@@ -38,6 +39,7 @@ const NAV = [
   { id: 'bestiary', icon: <IconSkull />, label: 'Бестиарий' },
   { id: 'vehicles', icon: <IconCar />, label: 'Гараж' },
   { id: 'deck', icon: <IconCards />, label: 'Колода' },
+  { id: 'tables', icon: <IconD10 />, label: 'Таблицы' },
   { id: 'factions', icon: <IconFlag />, label: 'Фракции' },
   { id: 'shop', icon: <IconShop />, label: 'Каталог' },
   { id: 'gear', icon: <IconGear />, label: 'Эффекты' },
@@ -319,6 +321,7 @@ function GMPanel(pr) {
         {section === 'profs' && <ProfEditor profs={pr.profs} saveProfs={pr.saveProfs} onBack={backToOverview} />}
         {section === 'vehicles' && <GaragePanel characters={pr.characters} saveChar={pr.saveChar} vehicles={pr.vehicles} saveVehicle={pr.saveVehicle} vehArchive={pr.vehArchive} archiveVehicle={pr.archiveVehicle} spawned={pr.spawned} addLog={pr.addLog} addGmLog={pr.addGmLog} myName={pr.myName} />}
         {section === 'vehicles' && <VehiclesPanel characters={pr.characters} saveChar={pr.saveChar} spawned={pr.spawned} saveSpawned={pr.saveSpawned} vehicles={pr.vehicles} roomCode={pr.roomCode} addLog={pr.addLog} scene={pr.scene} />}
+        {section === 'tables' && <TablesPanel addLog={pr.addLog} addGmLog={pr.addGmLog} myName={pr.myName} />}
         {section === 'deck' && <DeckPanel characters={pr.characters} saveChar={pr.saveChar} addLog={pr.addLog} addGmLog={pr.addGmLog} myName={pr.myName} showTarot={pr.showTarot} />}
         {section === 'factions' && <FactionsPanel factions={pr.factions} saveFactions={pr.saveFactions} />}
         {section === 'shop' && <ShopEditor shop={pr.shop} saveShop={pr.saveShop} onBack={backToOverview} />}

@@ -7,6 +7,7 @@ import { buildShopDefaults } from '../data/shopDefaults';
 import { newVehicle } from '../data/vehicles';
 import { PROFS } from '../data/professions';
 import { r1, uid } from './dice';
+import { EXTRA_TABLES, extraTable } from '../data/lifepathExtra';
 import { grantPatch } from './grant';
 import { giveSolution, addCassette } from './gearOps';
 
@@ -84,6 +85,7 @@ function applyLifepath(c,cat,lp,rnd){
   }
   (lp.roots||[]).forEach(function(r){lines.push(r.title+": "+r.t)});
   if((lp.inner||[]).length)lines.push("Кто ты внутри: "+lp.inner.map(function(r){return r.title+" — "+r.t}).join("; "));
+  (lp.extra||[]).forEach(function(r){lines.push(r.title+": "+r.t)});
   (lp.years||[]).forEach(function(ev0){
     var ev=Object.assign({},ev0);var ok=applyFx(ev.fx,ev);
     if(ev.kind==="friend"||ev.kind==="enemy")contacts.push({kind:ev.kind,who:ev.who,nick:ev.nick||"",label:ev.label,t:ev.t});
@@ -98,4 +100,48 @@ function applyLifepath(c,cat,lp,rnd){
   return{patch:out,lines:lines,contacts:contacts,skipped:skipped,skillsUsed:skillsUsed,moneyUsed:moneyUsed};
 }
 
-export { periods, rollRoots, rollInner, rollPeriod, rollYears, applyLifepath };
+/* ── Правка мастером (после «Готово») ── */
+/* Переброс одной строки корней / «кто ты внутри» / штриха */
+function rollRootKey(origin,key,rnd){rnd=rnd||r1;var t=origin==="pre"?PRE_ROOTS:POST_ROOTS;if(!t[key])return null;var n=rnd(10);return{key:key,title:ROOT_TITLES[key],n:n,t:t[key][n-1]}}
+function rollInnerKey(key,rnd){rnd=rnd||r1;if(!INNER[key])return null;var n=rnd(10);return{key:key,title:INNER_TITLES[key],n:n,t:INNER[key][n-1]}}
+function rollExtra(key,rnd){rnd=rnd||r1;var tb=extraTable(key);if(!tb)return null;var n=rnd(tb.rows.length);return{key:key,title:tb.title,n:n,t:tb.rows[n-1]}}
+/* Событие из выбранной таблицы: мастер добавляет его в годы */
+var EVENT_KINDS=[
+  {id:"pre_good",name:"Довоенные годы: удача"},{id:"pre_bad",name:"Довоенные годы: беда"},
+  {id:"after_good",name:"После ударов: удача"},{id:"after_bad",name:"После ударов: беда"},
+  {id:"child",name:"Детство"},{id:"friend",name:"Друг"},{id:"enemy",name:"Враг"},{id:"love",name:"Любовь"},
+  {id:"quiet",name:"Тихие годы"},{id:"custom",name:"Своё событие (текст)"}
+];
+function rollEventKind(kind,label,rnd,text){
+  rnd=rnd||r1;var ev;
+  if(kind==="child"){var c=rnd(10);var ce=CHILDHOOD[c-1];ev={table:"child",kind:"child",rolls:[c],t:ce.t,fx:ce.fx}}
+  else if(/^(pre|after)_(good|bad)$/.test(kind)){var tb=kind.indexOf("pre")===0?PRE_YEARS:AFTER;var good=/good$/.test(kind);var y=rnd(10);var it=(good?tb.good:tb.bad)[y-1];
+    ev={table:kind.indexOf("pre")===0?"pre":"after",kind:good?"good":"bad",rolls:[y],t:(good?"Удача: ":"Беда: ")+it.t,fx:it.fx};if(it.fx&&it.fx.love){var lv=rollLove(rnd,true);ev.t+=". "+lv.t}}
+  else if(kind==="friend")ev=rollFriend(rnd);
+  else if(kind==="enemy")ev=rollEnemy(rnd);
+  else if(kind==="love")ev=rollLove(rnd);
+  else if(kind==="quiet")ev={kind:"quiet",rolls:[],t:"Тихие годы. Работал, ел, спал"};
+  else ev={kind:"custom",rolls:[],t:text||"…"};
+  return Object.assign({label:label||"",gm:true},ev);
+}
+/* Механика одного события (как на шаге 7, с теми же пределами) — патч листа */
+function eventFxPatch(c,cat,ev,rnd){
+  var r=applyLifepath(c,cat,{roots:[],inner:[],years:[ev]},rnd);var p=Object.assign({},r.patch);delete p.bio;delete p.lifepath;
+  return{patch:p,skipped:r.skipped.length>0,line:r.lines[r.lines.length-1]};
+}
+/* Есть ли у события механика */
+function hasFx(ev){return !!(ev&&ev.fx&&Object.keys(ev.fx).some(function(k){return k!=="love"}))}
+/* Строки биографии, которые написал жизненный путь */
+var LIFE_PREFIXES=Object.keys(ROOT_TITLES).map(function(k){return ROOT_TITLES[k]+":"}).concat(["Кто ты внутри:"],EXTRA_TABLES.map(function(t){return t.title+":"}));
+function isLifeLine(l){l=String(l||"");return /^\d{4}–\d{4}:/.test(l)||LIFE_PREFIXES.some(function(p){return l.indexOf(p)===0})||/^[^:]{0,40}·\s?мастер:/.test(l)}
+function lifeLines(lp){
+  var lines=[];(lp.roots||[]).forEach(function(r){lines.push(r.title+": "+r.t)});
+  if((lp.inner||[]).length)lines.push("Кто ты внутри: "+lp.inner.map(function(r){return r.title+" — "+r.t}).join("; "));
+  (lp.extra||[]).forEach(function(r){lines.push(r.title+": "+r.t)});
+  (lp.years||[]).forEach(function(ev){lines.push((ev.label?ev.label:"Событие · мастер")+": "+ev.t+(ev.nick?" (кличка: "+ev.nick+")":""))});
+  return lines;
+}
+/* Переписать био: строки пути заново, остальное (что дописали руками) — как было */
+function rebuildBio(c,lp){var bio=Array.isArray(c.bio)?c.bio:(c.bio?[c.bio]:[]);return lifeLines(lp).concat(bio.filter(function(l){return !isLifeLine(l)}))}
+
+export { periods, rollRoots, rollInner, rollPeriod, rollYears, applyLifepath, rollRootKey, rollInnerKey, rollExtra, EVENT_KINDS, rollEventKind, eventFxPatch, hasFx, isLifeLine, lifeLines, rebuildBio };

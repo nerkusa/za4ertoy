@@ -62,7 +62,7 @@ return(<div className="zc-main"><RollPopup roll={rP} onClose={function(){sRP(nul
 {tab==="skills"&&<SkillsTab char={c} save={pr.save} onRoll={sRP} isGM={pr.isGM} addLog={pr.addLog} initiative={pr.initiative}/>}
 {tab==="combat"&&<CombatTab vehicles={pr.vehicles} char={c} save={pr.save} logs={pr.logs} addLog={pr.addLog} onRoll={sRP} spawned={pr.spawned} saveSpawned={pr.saveSpawned} characters={pr.characters} isGM={pr.isGM} onNpcDeath={sNpcDeathEv} savePendingAttack={pr.savePendingAttack} room={pr.room} saveNpcHit={pr.saveNpcHit} shop={pr.shop} initiative={pr.initiative} saveInitiative={pr.saveInitiative}/>}
 {tab==="bracelet"&&<BraceletTab char={c} save={pr.save} onRoll={sRP} isGM={pr.isGM} addLog={pr.addLog} addGmLog={pr.addGmLog} shop={pr.shop} initiative={pr.initiative}/>}
-{tab==="body"&&<BodyTab char={c} save={pr.save} onRoll={sRP} isGM={pr.isGM} addLog={pr.addLog} shop={pr.shop} initiative={pr.initiative} changeAccount={pr.changeAccount}/>}
+{tab==="body"&&<BodyTab addGmLog={pr.addGmLog} char={c} save={pr.save} onRoll={sRP} isGM={pr.isGM} addLog={pr.addLog} shop={pr.shop} initiative={pr.initiative} changeAccount={pr.changeAccount}/>}
 {tab==="body"&&<div style={{marginTop:12}}><ReputationCard factions={pr.factions}/></div>}
 {tab==="garage"&&<GarageTab char={c} save={pr.save} onRoll={sRP} isGM={pr.isGM} addLog={pr.addLog} shop={pr.shop} vehicles={pr.vehicles} saveVehicle={pr.saveVehicle} characters={pr.characters} initiative={pr.initiative}/>}
 {tab==="bag"&&<InvTab char={c} save={pr.save} shop={pr.shop} addLog={pr.addLog} onRoll={sRP}/>}

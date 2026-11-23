@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { cF, bioLines } from '../../utils/character';
+import LifepathEditor from '../gm/LifepathEditor';
 import { getTraits } from '../../utils/traitStore';
 import { getProfs } from '../../utils/profStore';
 import { ORIGINS, originOf } from '../../data/professions';
@@ -158,6 +159,7 @@ return(<div style={{display:"flex",flexDirection:"column",gap:12}}>
 <div className="sec">
   <h3>Био</h3>
   <LiveField tag="textarea" style={{minHeight:80,resize:"vertical",width:"100%"}} value={bioLines(c).join("\n")} onCommit={function(val){sv(Object.assign({},c,{bio:val?val.split("\n"):[]}))}}/>
+  {gm&&<LifepathEditor char={c} save={sv} addGmLog={pr.addGmLog}/>}
 </div>
 {!gm&&pr.changeAccount&&<AccountCard login={c._fbId} changeAccount={pr.changeAccount}/>}
 </div>)}

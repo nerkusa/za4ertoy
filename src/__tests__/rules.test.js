@@ -670,3 +670,28 @@ describe('Таро и Знаки', function(){
   });
   test('миграция', function(){var m=mig4({name:'x',skills:{}});expect(m.signs).toEqual([]);expect(m.heroCard).toBeNull();expect(m.burned).toBe(0)});
 });
+
+/* ── Правка жизненного пути мастером, штрихи, таблицы мастера ── */
+import { rollEventKind, eventFxPatch, rebuildBio, rollExtra, rollRootKey, isLifeLine } from '../utils/lifepath';
+import { EXTRA_TABLES } from '../data/lifepathExtra';
+import { GM_TABLES, tableRow } from '../data/gmTables';
+describe('жизненный путь: мастер', function(){
+  test('событие из таблицы и его механика', function(){
+    var ev=rollEventKind('pre_good','2005–2010',function(){return 7});
+    expect(ev.t).toContain('Охотился с отцом');expect(ev.label).toBe('2005–2010');
+    var c={skills:{'Выживание':2},lockedSkills:{'Выживание':2},money:10,profession:'none'};
+    var r=eventFxPatch(c,CAT,ev);expect(r.patch.skills['Выживание']).toBe(3);expect(r.patch.bio).toBeUndefined();
+    expect(rollEventKind('custom','',null,'Нашёл кота').t).toBe('Нашёл кота');
+  });
+  test('био переписывается, ручные строки остаются', function(){
+    var lp={roots:[rollRootKey('post','born',function(){return 1})],inner:[],extra:[rollExtra('fear',function(){return 1})],years:[{label:'2020–2025',t:'Тихие годы'}]};
+    var c={bio:['Кем были родители: старое','2015–2020: старое','Любит кошек']};
+    var b=rebuildBio(c,lp);
+    expect(b).toEqual(['Где родился: В бараке Мирного','Чего боишься: Тумана','2020–2025: Тихие годы','Любит кошек']);
+    expect(isLifeLine('Любит кошек')).toBe(false);
+  });
+  test('штрихи и таблицы мастера — полные', function(){
+    EXTRA_TABLES.forEach(function(t){expect(t.rows.length).toBe(10)});
+    GM_TABLES.forEach(function(t){for(var n=1;n<=t.die;n++)expect(tableRow(t,n)).toBeTruthy()});
+  });
+});
