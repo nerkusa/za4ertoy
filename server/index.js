@@ -143,7 +143,29 @@ function notify(changedSegments) {
   });
 }
 
+/* Если рядом есть собранный сайт (../build или STATIC_DIR), сервер отдаёт
+   и его — тогда хватает одного порта: удобно для туннеля с домашнего ПК.
+   На VPS сайт по-прежнему отдаёт nginx. */
+const STATIC_DIR = path.resolve(process.env.STATIC_DIR || path.join(__dirname, '..', 'build'));
+const HAS_STATIC = fs.existsSync(path.join(STATIC_DIR, 'index.html'));
+const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'application/javascript', '.css': 'text/css', '.json': 'application/json', '.png': 'image/png', '.jpg': 'image/jpeg', '.svg': 'image/svg+xml', '.ico': 'image/x-icon', '.woff2': 'font/woff2', '.woff': 'font/woff', '.txt': 'text/plain; charset=utf-8', '.map': 'application/json' };
+function serveStatic(req, res) {
+  let rel = decodeURIComponent(String(req.url || '/').split('?')[0]);
+  let file = path.resolve(STATIC_DIR, '.' + rel);
+  if (file !== STATIC_DIR && !file.startsWith(STATIC_DIR + path.sep)) { res.writeHead(403); res.end(); return; }
+  fs.stat(file, function (err, st) {
+    if (err || !st.isFile()) file = path.join(STATIC_DIR, 'index.html');
+    fs.readFile(file, function (e2, buf) {
+      if (e2) { res.writeHead(404); res.end(); return; }
+      const ext = path.extname(file).toLowerCase();
+      res.writeHead(200, { 'content-type': MIME[ext] || 'application/octet-stream', 'cache-control': ext === '.html' ? 'no-cache' : 'public, max-age=31536000' });
+      res.end(buf);
+    });
+  });
+}
+
 const server = http.createServer(function (req, res) {
+  if (HAS_STATIC) { serveStatic(req, res); return; }
   res.writeHead(200, { 'content-type': 'text/plain' });
   res.end('zachertoy-server ok');
 });
@@ -316,5 +338,6 @@ wss.on('connection', function (ws) {
 
 server.listen(PORT, function () {
   console.log('zachertoy-server listening on :' + PORT + ' (data: ' + DATA_FILE + ', users: ' + USERS_FILE + ')');
+  if (HAS_STATIC) console.log('Сайт отдаётся отсюда же: http://localhost:' + PORT + ' (' + STATIC_DIR + ')');
   if (!ADMIN_ENABLED) console.log('ВНИМАНИЕ: GM_LOGIN / GM_PASSWORD не заданы — вход ГМ отключён.');
 });

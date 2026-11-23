@@ -5,7 +5,12 @@
 /* process.env.REACT_APP_WS_URL подставляется webpack'ом при сборке
    (CRA/DefinePlugin) — сам по себе идентификатор `process` в браузере
    не существует, поэтому проверять typeof process здесь нельзя. */
-var WS_URL = process.env.REACT_APP_WS_URL || 'ws://localhost:8788';
+/* Без REACT_APP_WS_URL: в разработке (npm start, порт 3000) — локальный
+   сервер на 8788, иначе — тот же адрес, с которого открыт сайт (сервер сам
+   отдаёт сайт, например через туннель). */
+var WS_URL = process.env.REACT_APP_WS_URL || (typeof window !== 'undefined' && window.location && window.location.port !== '3000' && window.location.host
+  ? (window.location.protocol === 'https:' ? 'wss://' : 'ws://') + window.location.host + '/ws'
+  : 'ws://localhost:8788');
 
 var socket = null;
 var connected = false;
