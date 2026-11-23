@@ -24,7 +24,12 @@ scp root@94.125.100.244:/var/lib/zachertoy/data.json .
 scp root@94.125.100.244:/var/lib/zachertoy/users.json .
 ```
 
-## Каждый раз перед игрой
+## Каждый раз перед игрой — проще всего
+Двойной щелчок по `start-windows.bat` в папке проекта. В первый раз спросит
+логин и пароль мастера (запомнит в `server\gm.local.bat`). Откроются два
+окна: сервер и «Туннель» со ссылкой для друзей.
+
+## То же руками
 Окно 1 (папка `za4ertoy\server`):
 ```
 $env:GM_LOGIN="логин"; $env:GM_PASSWORD="пароль"; node index.js

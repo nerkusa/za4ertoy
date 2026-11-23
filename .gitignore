@@ -13,3 +13,5 @@ yarn-error.log*
 server/node_modules
 server/data.json
 server/users.json
+server/sessions.json
+server/gm.local.bat
