@@ -100,9 +100,11 @@ function PlayerAttackNotif(pr){
     var t=d+dv+dg+wp+npcCritPen(npc,"dodge");
     var det="d10("+d+")+Реакция("+dv+")+Уклонение("+dg+")"+(wp?" "+wp+"(деморализован)":"")+"="+t;
     var dodged=t>=atk.hitRoll;
-    update(ref(db,"rooms/"+pr.room+"/pendingAttacks/"+id),{dodgeRoll:t,status:dodged?"done":"pending_dmg",dodgeDetail:det});
+    /* Уклонился — статус «dodged»: игрок видит итог в окне атаки и закрывает его сам */
+    update(ref(db,"rooms/"+pr.room+"/pendingAttacks/"+id),{dodgeRoll:t,status:dodged?"dodged":"pending_dmg",dodgeDetail:det});
     addLog({who:npc.name,type:"dodge",label:(dodged?"Уклонился от ":"Не уклонился от ")+atk.attackerName,detail:det+" vs "+atk.hitRoll,total:t});
-    /* onRoll убран — результат показывается в PlayerAttackStatus у игрока */
+    /* Мастеру — короткий итог; при попадании у него и так откроется окно урона */
+    if(dodged&&onRoll)onRoll({label:npc.name+": уклонение",d10:d,crit:R.crit,fumble:R.fumble,parts:[{label:"Реакция",value:dv},{label:"Уклонение",value:dg}].concat(wp?[{label:"Штраф",value:wp}]:[]),total:t,subtext:"Уклонился от "+atk.attackerName+" ("+t+" против "+atk.hitRoll+")"});
   }
   function acceptHit(){
     if(isFear){resolveFear(-999,"без сопротивления");return;}

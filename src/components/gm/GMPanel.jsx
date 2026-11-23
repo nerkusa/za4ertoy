@@ -19,6 +19,7 @@ import GMRoll from './GMRoll';
 import ChatTab from '../tabs/ChatTab';
 import CoopRollPopup from '../combat/CoopRollPopup';
 import RollPopup from '../combat/RollPopup';
+import PlayerAttackNotif from '../combat/PlayerAttackNotif';
 import LoreEditor from './LoreEditor';
 import ProfEditor from './ProfEditor';
 import ShopEditor from './ShopEditor';
@@ -299,6 +300,7 @@ function GMPanel(pr) {
   const [sid, setSid] = useState(null);
   const [section, setSection] = useState('overview');
   const [showDonate, setShowDonate] = useState(false);
+  const [atkRoll, setAtkRoll] = useState(null);
 
   const sel = pr.characters.find(function (c) { return c._fbId === sid; });
   if (sel) return <React.Fragment><SlepDecision characters={pr.characters} saveChar={pr.saveChar} npcTempl={pr.npcTempl} saveNpcTempl={pr.saveNpcTempl} addLog={pr.addLog} addGmLog={pr.addGmLog} myName={pr.myName} /><GameView char={sel} save={function (d) { pr.saveChar(sel._fbId, d); }} onBack={function () { setSid(null); }} isGM={true} logs={pr.logs} addLog={pr.addLog} addGmLog={pr.addGmLog} chat={pr.chat} sendChat={pr.sendChat} lore={pr.lore} mapData={pr.mapData} saveMap={pr.saveMap} characters={pr.characters} spawned={pr.spawned} saveSpawned={pr.saveSpawned} pendAtk={pr.pendAtk} clearPendingAttack={pr.clearPendingAttack} room={pr.roomCode} savePendingAttack={pr.savePendingAttack} saveNpcHit={pr.saveNpcHit} shop={pr.shop} initiative={pr.initiative} saveInitiative={pr.saveInitiative} traits={pr.traits} factions={pr.factions} vehicles={pr.vehicles} saveVehicle={pr.saveVehicle} /></React.Fragment>;
@@ -307,6 +309,9 @@ function GMPanel(pr) {
 
   return (
     <div className="gm-shell">
+      {/* Атака игрока по NPC всплывает у мастера в любой вкладке (в бестиарии — своя) */}
+      {section !== 'bestiary' && <PlayerAttackNotif attacks={pr.pendAtk || {}} clearPendingAttack={pr.clearPendingAttack} spawned={pr.spawned || {}} saveSpawned={pr.saveSpawned} addLog={pr.addLog} onRoll={setAtkRoll} room={pr.roomCode} />}
+      <RollPopup roll={atkRoll} onClose={function () { setAtkRoll(null); }} />
       <SlepDecision characters={pr.characters} saveChar={pr.saveChar} npcTempl={pr.npcTempl} saveNpcTempl={pr.saveNpcTempl} addLog={pr.addLog} addGmLog={pr.addGmLog} myName={pr.myName} />
       {showDonate && <DonatePage onClose={function () { setShowDonate(false); }} isGM={true} saveMap={pr.saveMap} mapData={pr.mapData} />}
       <nav className="gm-nav">

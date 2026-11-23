@@ -12,7 +12,7 @@ function PlayerAttackStatus(pr){
   /* Ищем атаки от этого игрока которые ещё не закрыты */
   /* Ищем по myId — attackerId записывается при создании атаки */
   var mine=Object.entries(attacks).filter(function(e){
-    return e[1].fromPlayer&&(e[1].attackerId===myId||(e[1].attackerName&&e[1].attackerName===myName))&&(e[1].status==="pending_dodge"||e[1].status==="pending_dmg"||e[1].status==="pending_shield");
+    return e[1].fromPlayer&&(e[1].attackerId===myId||(e[1].attackerName&&e[1].attackerName===myName))&&(e[1].status==="pending_dodge"||e[1].status==="pending_dmg"||e[1].status==="pending_shield"||e[1].status==="dodged");
   });
   if(mine.length===0)return null;
   var entry=mine[0];var id=entry[0];var atk=entry[1];
