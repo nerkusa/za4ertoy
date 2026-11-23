@@ -67,7 +67,7 @@ function scheduleSave() {
   if (saveTimer) return;
   saveTimer = setTimeout(function () {
     saveTimer = null;
-    fs.writeFile(DATA_FILE, JSON.stringify(tree), function () {});
+    fs.writeFile(DATA_FILE, JSON.stringify(tree), function (err) { if (err) console.log('НЕ УДАЛОСЬ СОХРАНИТЬ МИР: ' + err.message); });
   }, 300);
 }
 
@@ -76,7 +76,7 @@ function scheduleUsersSave() {
   if (usersSaveTimer) return;
   usersSaveTimer = setTimeout(function () {
     usersSaveTimer = null;
-    fs.writeFile(USERS_FILE, JSON.stringify(users), function () {});
+    fs.writeFile(USERS_FILE, JSON.stringify(users), function (err) { if (err) console.log('НЕ УДАЛОСЬ СОХРАНИТЬ АККАУНТЫ: ' + err.message); });
   }, 300);
 }
 

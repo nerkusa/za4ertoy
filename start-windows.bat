@@ -15,7 +15,16 @@ if not exist gm.local.bat (
   set /p P=Придумай пароль мастера: 
   call :savegm
 )
-call gm.local.bat
+if exist gm.local.bat (call gm.local.bat) else (call :usegm)
+rem проверка: можно ли писать в папку (там хранится мир)
+echo ok> _write_test.tmp 2>nul
+if not exist _write_test.tmp (
+  echo.
+  echo ВНИМАНИЕ: нет прав на запись в %cd% — мир НЕ будет сохраняться.
+  echo Открой PowerShell от имени администратора и выполни:
+  echo   icacls C:\za4ertoy /grant "%USERNAME%:(OI)(CI)F" /T
+  echo.
+) else del _write_test.tmp
 start "Туннель - ссылка для друзей" cmd /k cloudflared tunnel --url http://localhost:8788
 echo.
 echo Сервер игры запущен. Ссылка для друзей появится в окне "Туннель"
@@ -29,4 +38,9 @@ exit /b
 :savegm
 > gm.local.bat echo set GM_LOGIN=%L%
 >> gm.local.bat echo set GM_PASSWORD=%P%
+exit /b
+
+:usegm
+set GM_LOGIN=%L%
+set GM_PASSWORD=%P%
 exit /b
