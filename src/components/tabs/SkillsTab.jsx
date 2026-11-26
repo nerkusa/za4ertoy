@@ -8,6 +8,7 @@ import { diseaseList } from '../../data/gear';
 import { getTraits } from '../../utils/traitStore';
 import { IconD10 } from '../../icons/index';
 import SignsStrip from '../SignsStrip';
+import CondBar from '../CondBar';
 import { lastRollPatch } from '../../utils/signs';
 import { VYD, burnedOf, restoreState, restorePatch } from '../../utils/slep';
 
@@ -61,6 +62,7 @@ function bonusOf(list){return (list||[]).filter(function(b){return b.amount}).ma
 
 return(<div style={{display:"flex",flexDirection:"column",gap:12}}>
 <SignsStrip char={c} save={sv} addLog={pr.addLog} onRoll={pr.onRoll} initiative={pr.initiative} isGM={isGM}/>
+<CondBar target={c}/>
 <div className="slbar"><span>СЛ:</span>
 <button className={dc===0?"on":""} onClick={function(){sDC(0)}}>без СЛ</button>
 {DC_LIST.map(function(d){return <button key={d.v} className={dc===d.v?"on":""} title={d.l} onClick={function(){sDC(d.v)}}>{d.v}</button>})}
@@ -92,7 +94,7 @@ return(<div key={s.name} style={{display:"flex",alignItems:"center"}}>
 <button className="sk" onClick={function(){roll(st.key,s.name)}}>
 <span>{s.name}{s.name===VYD&&burnedOf(c)>0&&<span className="burnp" title={"Слепок съел "+burnedOf(c)+" — красные перечёркнутые"}>{Array.from({length:Math.max((c.skills||{})[VYD]||0,burnedOf(c))}).map(function(_,i,arr){return <i key={i} className={i>=arr.length-burnedOf(c)?"x":""}/>})}</span>}{skCost(s.name)>1&&<em className="mono" style={{color:"var(--rust)",fontSize:11,marginLeft:4,fontStyle:"normal"}}>×2</em>}{blocked&&<em style={{color:"var(--rust)",fontSize:11,marginLeft:6}}>тонкая работа невозможна</em>}</span>
 <span className="bon">{bon}</span>
-<span className="tot">{v+ev}<em>{" ("+v+"+"+ev+")"}</em></span>
+<span className="tot">{v+ev}<em>{" ("+v+(ev<0?"−"+(-ev):"+"+ev)+")"}</em></span>
 </button>
 {(free||pts>0||canMinus&&c.locked&&!isGM&&hasUnlocked)&&<span className="pm" style={{marginRight:8}}><button disabled={!canMinus} onClick={function(){uSk(s.name,-1)}}>−</button><button disabled={!canPlus} onClick={function(){uSk(s.name,1)}}>+</button></span>}
 </div>)})}

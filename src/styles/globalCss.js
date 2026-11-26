@@ -122,6 +122,11 @@ td.num{font-family:var(--f-mono);text-align:right;white-space:nowrap}
 .tcard.back .tnum{font-size:32px;color:#f0d79a}
 .tshow{position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:1001;display:flex;align-items:center;justify-content:center;animation:fadeIn .3s}
 .tshow .tcard{width:260px;min-height:360px;transform:scale(1);font-size:15px}.tshow .tcard b{font-size:22px}.tshow .tcard .tnum{font-size:30px}.tshow .tcard .tt,.tshow .tcard .tm{font-size:15px}
+.condbar{display:flex;flex-wrap:wrap;gap:5px;align-items:center}
+.cond{display:inline-flex;align-items:center;gap:5px;border:1.5px solid var(--rust);background:#efe2d6;color:var(--ink);padding:2px 7px;font-size:12.5px;font-weight:600}
+.cond b{color:var(--rust);font-size:13px}.cond.c-fire{border-color:#c45a1c;background:#f5dcc4}.cond.c-deaf,.cond.c-stun{border-color:#8a6200}
+.cond button{border:1px solid currentColor;background:transparent;font-size:11px;padding:0 5px;cursor:pointer;color:inherit}
+.condbar select{font-size:12px;padding:2px 4px}
 .okbox{border-left:5px solid var(--swamp);background:#e5e4cc;padding:8px 12px;font-size:13.5px}
 
 /* bracelet */

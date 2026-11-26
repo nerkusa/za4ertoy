@@ -3,6 +3,7 @@
    руке или ноге ломает протез, а не конечность. Статусы лежат в c.crits
    (у NPC — в npc.crits), их эффекты идут через общий механизм эффектов. */
 import { r1 } from './dice';
+import { condEffects } from './conditions';
 
 var CRIT_MIN=10,CRIT_HEAVY=15;
 function st(key,name,text,effects,extra){return Object.assign({key:key,name:name,text:text,effects:effects||[]},extra||{})}
@@ -76,7 +77,7 @@ function bleedAmount(t){return ((t&&t.crits)||[]).reduce(function(a,x){return a+
 function critEffects(t){var out=[];((t&&t.crits)||[]).forEach(function(x){(x.effects||[]).forEach(function(e){out.push(Object.assign({},e,{src:{from:"crit",name:x.name,id:x.id}}))})});return out}
 /* Штраф NPC от статусов: all — ко всем броскам, attack — к атаке, dodge — к уклонению */
 function npcCritPen(npc,what){
-  return critEffects(npc).reduce(function(a,e){
+  return critEffects(npc).concat(condEffects(npc)).reduce(function(a,e){
     if(e.type==="all_roll")return a+(e.amount||0);
     if(what==="attack"&&e.type==="attack_bonus")return a+(e.amount||0);
     if(what==="dodge"&&e.type==="skill_bonus"&&e.skill==="Уклонение")return a+(e.amount||0);

@@ -24,6 +24,7 @@ import LevelUpPopup from './combat/LevelUpPopup';
 import NpcDeathPopup from './combat/NpcDeathPopup';
 import PendingAttackPopup from './combat/PendingAttackPopup';
 import PlayerAttackNotif from './combat/PlayerAttackNotif';
+import { condTurnStart } from '../utils/conditions';
 import PlayerAttackStatus from './combat/PlayerAttackStatus';
 import RollPopup from './combat/RollPopup';
 
@@ -42,10 +43,15 @@ useEffect(function(){if(c.combatDepoUsed&&!pr.initiative&&!pr.isGM)pr.save(Objec
 var _ini=pr.initiative;var _turnKey=_ini&&Array.isArray(_ini.list)&&_ini.list[_ini.turn||0]&&_ini.list[_ini.turn||0].id===c._fbId?(_ini.round||1)+":"+(_ini.turn||0):"";
 useEffect(function(){
   if(pr.isGM||!_turnKey||c.bleedTick===_turnKey)return;
-  var b=bleedAmount(c);if(!b){pr.save(Object.assign({},c,{bleedTick:_turnKey}));return}
-  var h=hpOf(c,cF(c).fs);var nh=Math.max(0,h.cur-b);
-  pr.save(Object.assign({},c,{curHp:nh,bleedTick:_turnKey}));
-  if(pr.addLog)pr.addLog({who:c.name||"???",type:"crit",label:(c.name||"???")+": кровотечение −"+b+" Здоровья",detail:"начало хода · Здоровье "+h.cur+"→"+nh,total:b});
+  /* кровотечение и состояния (огонь, пропуск хода, отсчёт) — в начале своего хода */
+  var b=bleedAmount(c);var ct=condTurnStart(c);var who=c.name||"???";
+  var patch={bleedTick:_turnKey,conds:ct.conds};
+  var h=hpOf(c,cF(c).fs);var loss=b+ct.dmg;var nh=Math.max(0,h.cur-loss);if(loss)patch.curHp=nh;
+  pr.save(Object.assign({},c,patch));
+  if(!pr.addLog)return;
+  if(b)pr.addLog({who:who,type:"crit",label:who+": кровотечение −"+b+" Здоровья",detail:"начало хода · Здоровье "+h.cur+"→"+(h.cur-b),total:b});
+  if(ct.notes.length)setTimeout(function(){pr.addLog({who:who,type:"crit",label:who+": "+ct.notes.join(", "),detail:"начало хода"+(ct.dmg?" · Здоровье → "+nh:""),total:ct.dmg})},5);
+  if(ct.ended.length)setTimeout(function(){pr.addLog({who:who,type:"rest",label:who+": прошло — "+ct.ended.join(", "),detail:"",total:0})},10);
 },[_turnKey]);
 var tabs=[{id:"skills",l:"Навыки",ic:<IconSkills/>},{id:"combat",l:"Бой",ic:<IconBattle/>},{id:"bracelet",l:"Браслет",ic:<IconBracelet/>},{id:"body",l:"Тело",ic:<IconBody/>},{id:"bag",l:"Сумка",ic:<IconInv/>},{id:"garage",l:"Машина",ic:<IconCar/>},{id:"chat",l:"Чат и лог",ic:<IconChat/>},{id:"library",l:"Лор",ic:<IconLib/>},{id:"guide",l:"Памятка",ic:<IconScroll/>}];
 var pendAtk=pr.pendAtk||{};var clearPA=pr.clearPendingAttack;var isGMv=pr.isGM;

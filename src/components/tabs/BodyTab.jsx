@@ -5,7 +5,7 @@ import { getTraits } from '../../utils/traitStore';
 import { getProfs } from '../../utils/profStore';
 import { ORIGINS, originOf } from '../../data/professions';
 import { IRON_STAGES, UPKEEP, DISEASES, doseState, diseaseList, diseaseByKey } from '../../data/gear';
-import { findBy, solutionList, ironSteps, upkeepCount, LIMB_KEYS, LIMB_NAME, isArm, ironArms, ironLegs } from '../../data/traits';
+import { effectLabel, findBy, solutionList, ironSteps, upkeepCount, LIMB_KEYS, LIMB_NAME, isArm, ironArms, ironLegs } from '../../data/traits';
 import { inCombat } from '../../utils/gearFx';
 import { patchFromShopItem, removeSolution, setTip, setLimb, tipFree, giveSolution } from '../../utils/gearOps';
 import { prosthesesOf } from '../../utils/crits';
@@ -76,7 +76,7 @@ function LimbCard(lp){
   var list=(arm?cat.tips:cat.legTips)||[];var base=arm?"kist":"stopa";
   var avail=list.filter(function(t){return t.key===base||t.key===l.tip||tipFree(p2,k,t.key)>0});
   var t=findBy(list,l.tip);
-  var eff=t?(t.effects||[]).map(function(e){return (e.amount>0?"+":"")+e.amount+" "+(e.skill||e.stat)}).join(", "):"";
+  var eff=t?(t.effects||[]).map(effectLabel).filter(Boolean).join(", "):"";
   return <div className="card"><div className="ch"><b>{LIMB_NAME[k]+": "+(arm?"протез":"«Опора»")}</b><span>{(l.grade==="rebuilt"?"перебранный":"заводской")+" · гнездо"}</span></div><div className="cb">
     <div className="n-field"><label>Насадка в замке</label><select className="n-input" disabled={fighting} value={l.tip||base} onChange={function(e){changeTip(k,e.target.value)}}>{avail.map(function(x){return <option key={x.key} value={x.key}>{x.name}</option>})}</select></div>
     {t&&<p>{[eff,t.text,t.weapon?"оружие: "+t.weapon.dmgDice+(t.weapon.bonus?"+"+t.weapon.bonus:"")+" "+t.weapon.dmgType:null].filter(Boolean).join(" · ")||"без эффекта"}</p>}
@@ -129,7 +129,7 @@ return(<div style={{display:"flex",flexDirection:"column",gap:12}}>
   {list.length===0&&<p className="hint">Железа нет.</p>}
   <div className="cards">
   {LIMB_KEYS.map(function(k){return <LimbCard key={k} limbKey={k}/>})}
-  {list.filter(function(x){return x.def}).map(function(x){var d=x.def;var eff=(d.effects||[]).map(function(e){return e.type==="stat_set"?"Тело "+e.value:((e.amount>0?"+":"")+e.amount+" "+(e.skill||e.stat))}).join(", ");
+  {list.filter(function(x){return x.def}).map(function(x){var d=x.def;var eff=(d.effects||[]).map(effectLabel).filter(Boolean).join(", ");
     return <div key={x.key} className="card"><div className="ch"><b>{d.name}</b><span>{d.kind==="addon"?"накладное":d.kind==="full"?"полная замена · "+d.steps+" шага":"вживляемое · гнездо"}</span></div><div className="cb"><p>{[eff,d.text].filter(Boolean).join(" · ")||"—"}</p>
     {d.depo&&<p className="hint">{"Заряд: "+(c.depoCharge!=null?c.depoCharge:1)+". Кнопка — во вкладке «Бой»."}{gm&&<button className="btn sm" style={{marginLeft:8}} onClick={function(){sv(Object.assign({},c,{depoCharge:1,combatDepoUsed:false}))}}>Перезарядить</button>}</p>}
     {gm&&<div><button className="btn sm" onClick={function(){apply(removeSolution(c,cat,{t:"implant",key:x.key}))}}>Снять</button></div>}</div></div>})}

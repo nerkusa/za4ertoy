@@ -6,6 +6,7 @@ import { originOf } from '../../data/professions';
 import { BRACELETS, DISEASES, IRON_STAGES, IMPRINT_STAGES, CASS_KINDS, kindName, doseState, diseaseList, diseaseByKey } from '../../data/gear';
 import { critsAfterRest } from '../../utils/crits';
 import CritsCard from '../CritsCard';
+import CondBar from '../CondBar';
 import { findBy, nestInfo, solutionList, ironSteps } from '../../data/traits';
 import { grantPatch, grantLabel } from '../../utils/grant';
 import { rollTrinket } from '../../data/trinkets';
@@ -110,7 +111,7 @@ function PartyCard(pr) {
     const noHeal = dose >= 4;
     if (noHeal && !window.confirm((c.name || '?') + ': Доза ' + dose + ' — по правилам Здоровье не восстанавливается. Восстановить только Волю?')) return;
     const half = dis.some(function (d) { return d.flags.restHalf; });
-    save({ curHp: noHeal ? hp.cur : (half ? Math.min(hp.max, hp.cur + Math.floor((hp.max - hp.cur) / 2)) : hp.max), curWill: w.max, shakenPenalty: 0, broken: false, depoCharge: 1, combatDepoUsed: false, crits: critsAfterRest(c), cassettes: (c.cassettes || []).map(function (x) { return x.stuck ? Object.assign({}, x, { stuck: false }) : x; }) });
+    save({ curHp: noHeal ? hp.cur : (half ? Math.min(hp.max, hp.cur + Math.floor((hp.max - hp.cur) / 2)) : hp.max), curWill: w.max, shakenPenalty: 0, broken: false, depoCharge: 1, combatDepoUsed: false, crits: critsAfterRest(c), conds: [], cassettes: (c.cassettes || []).map(function (x) { return x.stuck ? Object.assign({}, x, { stuck: false }) : x; }) });
     log('Отдых', c.name + (noHeal ? ' (Доза 4+: без Здоровья)' : ''));
   }
   function adjHp(d) { save({ curHp: Math.max(0, Math.min(hp.max, hp.cur + d)) }); log(d < 0 ? 'Урон' : 'Лечение', c.name + ': ' + (d > 0 ? '+' : '') + d + ' Здоровья'); }
@@ -173,6 +174,7 @@ function PartyCard(pr) {
           {c.lifepath && c.lifepath.done && <button className="btn sm" title="Игрок снова пройдёт шаг 7; эффекты прошлых бросков останутся — правь лист вручную" onClick={function () { if (window.confirm('Вернуть игрока на шаг 7? Прошлые эффекты жизненного пути не откатятся.')) save({ lifepath: { done: false, roots: [], inner: [], years: [] }, lifepathReroll: true }); }}>Жизненный путь заново</button>}
           <button className="btn sm" style={{ borderColor: 'var(--rust)', color: 'var(--rust)' }} onClick={del}>Удалить</button>
         </div>}
+        <CondBar target={c} edit={true} onChange={function (conds, label) { save({ conds: conds }); if (pr.addLog) pr.addLog({ who: 'ГМ', type: 'crit', label: (c.name || '?') + ': ' + label, detail: '', total: 0 }); }} />
         <CritsCard char={c} save={function (d) { pr.saveChar(c._fbId, d); }} isGM={true} addLog={pr.addLog} />
         <GrantBox char={c} shop={pr.shop} saveChar={pr.saveChar} addLog={pr.addLog} log={log} />
       </div>
@@ -190,7 +192,7 @@ function Overview(pr) {
     pr.characters.forEach(function (c) {
       const fs = cF(c).fs; const hp = hpOf(c, fs); const w = willOf(c, fs);
       const half = diseaseList(c).some(function (d) { return d.flags.restHalf; });
-      pr.saveChar(c._fbId, Object.assign({}, c, { curHp: (c.dose || 0) >= 4 ? hp.cur : (half ? Math.min(hp.max, hp.cur + Math.floor((hp.max - hp.cur) / 2)) : hp.max), curWill: w.max, shakenPenalty: 0, broken: false, depoCharge: 1, combatDepoUsed: false, crits: critsAfterRest(c) }));
+      pr.saveChar(c._fbId, Object.assign({}, c, { curHp: (c.dose || 0) >= 4 ? hp.cur : (half ? Math.min(hp.max, hp.cur + Math.floor((hp.max - hp.cur) / 2)) : hp.max), curWill: w.max, shakenPenalty: 0, broken: false, depoCharge: 1, combatDepoUsed: false, crits: critsAfterRest(c), conds: [] }));
     });
     if (pr.addGmLog) pr.addGmLog({ who: pr.myName || 'ГМ', label: 'Отдых всего отряда', detail: pr.characters.map(function (c) { return c.name || '?'; }).join(', ') });
   }

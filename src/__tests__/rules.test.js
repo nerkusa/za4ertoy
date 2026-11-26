@@ -695,3 +695,27 @@ describe('жизненный путь: мастер', function(){
     GM_TABLES.forEach(function(t){for(var n=1;n<=t.die;n++)expect(tableRow(t,n)).toBeTruthy()});
   });
 });
+
+/* ── Состояния в бою ── */
+import { addCond, removeCond, condTurnStart, condsOf as cOf } from '../utils/conditions';
+import { npcCritPen as ncp } from '../utils/crits';
+describe('состояния', function(){
+  test('сеть: −4 к атаке и Уклонению у игрока и NPC', function(){
+    var c={stats:{telo:5,reak:6,vosp:5,razum:4,har:4,volya:4},skills:{'Уклонение':3},conds:[]};
+    c.conds=addCond(c,'net');var f=cF(c);
+    expect(f.eSk['Уклонение']).toBe(-1);expect(f.pen.attack).toBe(-4);
+    var n={conds:addCond({},'net')};expect(ncp(n,'dodge')).toBe(-4);expect(ncp(n,'attack')).toBe(-4);
+  });
+  test('оглох: −2 ко всему ровно на два своих хода', function(){
+    var c={stats:{telo:5,reak:6,vosp:5,razum:4,har:4,volya:4},skills:{},conds:addCond({},'deaf')};
+    expect(cF(c).rollPen('razum').total).toBeLessThanOrEqual(-2);
+    var t1=condTurnStart(c);expect(t1.conds.length).toBe(1);
+    var t2=condTurnStart({conds:t1.conds});expect(t2.conds.length).toBe(1);
+    var t3=condTurnStart({conds:t2.conds});expect(t3.conds.length).toBe(0);expect(t3.ended).toEqual(['Оглох']);
+  });
+  test('горит: 1d6 в начале хода, до снятия; без действий — пропуск', function(){
+    var r=condTurnStart({conds:addCond({},'fire')},function(){return 4});expect(r.dmg).toBe(4);expect(r.conds.length).toBe(1);
+    var s=condTurnStart({conds:addCond({},'stun')});expect(s.skip).toBe(true);
+    expect(cOf({conds:removeCond({conds:addCond({},'fire')},'fire')}).length).toBe(0);
+  });
+});

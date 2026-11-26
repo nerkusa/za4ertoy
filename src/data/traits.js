@@ -14,9 +14,31 @@ import { diseaseList, IRON_FIST } from './gear';
 import { prosthesesOf } from '../utils/crits';
 import { getScene } from '../utils/sceneStore';
 import { critEffects } from '../utils/crits';
+import { condEffects } from '../utils/conditions';
 
 function genId(){return "gx_"+Date.now().toString(36)+Math.floor(Math.random()*1000).toString(36)}
 
+/* Эффект словами — для карточек железа и кассет */
+var ZONE_WORD={head:"голову",neck:"шею",body:"корпус",arms:"руки",legs:"ноги"};
+var STAT_WORD={telo:"Тело",reak:"Реакция",vosp:"Восприятие",razum:"Разум",har:"Характер",volya:"Воля"};
+function effectLabel(e){
+  if(!e)return "";var a=e.amount||0;var sg=a>0?"+":"";
+  switch(e.type){
+    case "stat_bonus":return sg+a+" "+(STAT_WORD[e.stat]||e.stat);
+    case "skill_bonus":return sg+a+" "+e.skill;
+    case "stat_set":return (STAT_WORD[e.stat]||"Тело")+" "+e.value;
+    case "hp_flat":case "max_hp":return sg+a+" к Здоровью";
+    case "all_roll":return sg+a+" ко всем броскам";
+    case "stat_roll":return sg+a+" к броскам "+(STAT_WORD[e.stat]||e.stat);
+    case "attack_bonus":return sg+a+" к атаке";
+    case "aim_bonus":return "прицельный штраф −"+a;
+    case "aim_pen":return "прицельный штраф +"+a;
+    case "zone_mult_override":return "попадание в "+(ZONE_WORD[e.zone]||e.zone)+" ×"+e.mult;
+    case "zone_dmg_reduce":return "урон в "+(ZONE_WORD[e.zone]||e.zone)+" −"+a;
+    case "free_overcome_fear":return "страх без траты Воли";
+    default:return "";
+  }
+}
 var EFFECT_TYPES=[
   {id:"stat_bonus",name:"+ к характеристике"},
   {id:"skill_bonus",name:"+ к навыку"},
@@ -126,6 +148,7 @@ function activeTraitEffects(c,cat){
   (originOf(c.origin).effects||[]).forEach(function(e){out.push(Object.assign({},e,{src:{from:"origin",name:originOf(c.origin).name}}))});
   diseaseList(c).forEach(function(d){d.effects.forEach(function(e){out.push(Object.assign({},e,{src:{from:"disease",name:d.name}}))})});
   critEffects(c).forEach(function(e){out.push(e)});
+  condEffects(c).forEach(function(e){out.push(e)});
   return out;
 }
 /* Двойная атака доступна всем (в базе её открывала черта) */
@@ -162,4 +185,4 @@ function hasDepo(c,cat){var s=(c&&c.solutions)||{};return (s.addons||[]).some(fu
 /* Планшет в сумке открывает игроку Отпечаток и точное Здоровье */
 function hasTablet(c){return ((c&&c.inventory)||[]).some(function(i){return /планшет/i.test(i.name||"")})}
 
-export { LIMB_KEYS, LIMB_NAME, isArm, isIron, limbTip, ironArms, ironLegs, gearShields, twoIronArms, EFFECT_TYPES, genId, findBy, braceletOf, canRead, solutionList, ironSteps, upkeepCount, nestInfo, canInsert, cassWorks, cassEffects, hasTraitEffect, activeTraitEffects, armorEffectivenessOf, activeTip, fineBlocked, gearWeapons, hasDepo, hasTablet };
+export { effectLabel, LIMB_KEYS, LIMB_NAME, isArm, isIron, limbTip, ironArms, ironLegs, gearShields, twoIronArms, EFFECT_TYPES, genId, findBy, braceletOf, canRead, solutionList, ironSteps, upkeepCount, nestInfo, canInsert, cassWorks, cassEffects, hasTraitEffect, activeTraitEffects, armorEffectivenessOf, activeTip, fineBlocked, gearWeapons, hasDepo, hasTablet };

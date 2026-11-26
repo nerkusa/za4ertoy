@@ -21,6 +21,8 @@ import { critsAfterRest } from '../../utils/crits';
 import { diseaseFlag } from '../../data/gear';
 import ShopPicker from '../ShopPicker';
 import InitiativeBar from '../combat/InitiativeBar';
+import CondBar from '../CondBar';
+import { condsOf, condByKey, removeCond } from '../../utils/conditions';
 
 function Lbl(pr){return <div style={{fontSize:11,fontWeight:700,letterSpacing:.06,textTransform:"uppercase",color:"var(--color-text-muted)"}}>{pr.children}</div>}
 function Bar(pr){return(<div style={{height:pr.h||8,borderRadius:0,background:"var(--color-sunken)",overflow:"hidden"}}><div style={{height:"100%",width:pr.pct+"%",background:pr.color,transition:"width 0.3s"}}/></div>)}
@@ -65,7 +67,14 @@ var hpP=mx>0?(curHp/mx)*100:0;
 var isGM=pr.isGM;
 var visibleLogs=(pr.logs||[]).filter(function(l){return isGM||(l.type!=="dmg_npc"&&l.type!=="spawn"&&l.type!=="gm_roll")});
 
+/* Выпутаться из сети: Тело + Атлетика + d10 против СЛ */
+function escapeCond(d){var R=rollHit();var tv=fs.telo||0;var at=es["Атлетика"]||0;var pen=inf.rollPen("telo");var t=R.d+tv+at+pen.total;var ok=t>=d.escape.dc;
+  if(ok)sv(Object.assign({},c,{conds:removeCond(c,d.key)}));
+  pr.addLog({who:c.name||"???",type:"skill",label:(c.name||"???")+": выпутаться ("+d.name+") — "+(ok?"вышло":"не вышло"),detail:"d10("+R.d+") + Тело("+tv+") + Атлетика("+at+")"+(pen.total?" + штраф("+pen.total+")":"")+" = "+t+" против СЛ "+d.escape.dc,total:t});
+  if(oR)oR({label:"Выпутаться · СЛ "+d.escape.dc,d10:R.d,crit:R.crit,fumble:R.fumble,parts:[{label:"Тело",value:tv},{label:"Атлетика",value:at}].concat(pen.parts),total:t,subtext:ok?"Свободен":"Сеть держит"})}
+
 return(<div style={{display:"flex",flexDirection:"column",gap:14}}>
+{(condsOf(c).length>0||isGM)&&<CondBar target={c} self={!isGM} edit={!!isGM} onEscape={escapeCond} onChange={function(conds,label){sv(Object.assign({},c,{conds:conds}));pr.addLog({who:isGM?"ГМ":(c.name||"???"),type:"crit",label:(c.name||"???")+": "+label,detail:"",total:0})}}/>}
 
 <div style={{display:"flex",gap:8}}>
 <div className="n-card" style={{flex:1,display:"flex",flexDirection:"column",gap:2,padding:"8px 14px"}}>
@@ -76,8 +85,8 @@ return(<div style={{display:"flex",flexDirection:"column",gap:14}}>
 {willPen!==0&&<div style={{fontSize:10,color:"#8a3b22",textAlign:"right"}}>{willPen+" ко всем броскам"}</div>}
 </div>
 <div style={{display:"flex",flexDirection:"column",gap:4}}>
-<button onClick={function(){var healHp=sm(rN(2,6));var healWill=r1(10);var noHeal=(c.dose||0)>=4;if(noHeal)healHp=0;if(diseaseFlag(c,"restHalf"))healHp=Math.floor(healHp/2);var newHp=Math.min(mx,curHp+healHp);var newWill=Math.min(mxW,curW+healWill);sv(Object.assign({},c,{curHp:newHp,curWill:newWill,crits:critsAfterRest(c),shakenPenalty:0,broken:false,repairUsed:false,combatDepoUsed:false}));pr.addLog({who:c.name||"???",type:"rest",label:"Короткий отдых — способности восстановлены",detail:(noHeal?"Доза 4+ — Здоровье не восстанавливается":"Здоровье +"+healHp+" (2d6)")+", Воля +"+healWill+" (1d10)",total:0})}} title="2d6 Здоровья + 1d10 Воли" className="n-btn n-btn-secondary" style={{color:"#3f6b34",padding:"5px 14px",fontSize:12}}>Короткий отдых</button>
-<button onClick={function(){var noHeal2=(c.dose||0)>=4;if(!window.confirm(noHeal2?"Доза 4+ — Здоровье не восстановится, только Воля. Отдыхать?":"Полноценный отдых — полностью восстановить Здоровье и Волю?"))return;sv(Object.assign({},c,{curHp:noHeal2?curHp:(diseaseFlag(c,"restHalf")?Math.min(mx,curHp+Math.floor((mx-curHp)/2)):mx),curWill:mxW,depoCharge:1,crits:critsAfterRest(c),cassettes:(c.cassettes||[]).map(function(x){return x.stuck?Object.assign({},x,{stuck:false}):x}),shakenPenalty:0,broken:false,repairUsed:false,combatDepoUsed:false}));pr.addLog({who:c.name||"???",type:"rest",label:"Полноценный отдых — всё восстановлено",detail:(noHeal2?"Доза 4+ — Здоровье не восстановлено":"Здоровье "+mx+"/"+mx)+", Воля "+mxW+"/"+mxW,total:0})}} title="Полностью восстанавливает Здоровье и Волю" className="n-btn n-btn-secondary" style={{color:"#4f5b2a",padding:"5px 14px",fontSize:12}}>Полноценный отдых</button>
+<button onClick={function(){var healHp=sm(rN(2,6));var healWill=r1(10);var noHeal=(c.dose||0)>=4;if(noHeal)healHp=0;if(diseaseFlag(c,"restHalf"))healHp=Math.floor(healHp/2);var newHp=Math.min(mx,curHp+healHp);var newWill=Math.min(mxW,curW+healWill);sv(Object.assign({},c,{curHp:newHp,curWill:newWill,crits:critsAfterRest(c),conds:[],shakenPenalty:0,broken:false,repairUsed:false,combatDepoUsed:false}));pr.addLog({who:c.name||"???",type:"rest",label:"Короткий отдых — способности восстановлены",detail:(noHeal?"Доза 4+ — Здоровье не восстанавливается":"Здоровье +"+healHp+" (2d6)")+", Воля +"+healWill+" (1d10)",total:0})}} title="2d6 Здоровья + 1d10 Воли" className="n-btn n-btn-secondary" style={{color:"#3f6b34",padding:"5px 14px",fontSize:12}}>Короткий отдых</button>
+<button onClick={function(){var noHeal2=(c.dose||0)>=4;if(!window.confirm(noHeal2?"Доза 4+ — Здоровье не восстановится, только Воля. Отдыхать?":"Полноценный отдых — полностью восстановить Здоровье и Волю?"))return;sv(Object.assign({},c,{curHp:noHeal2?curHp:(diseaseFlag(c,"restHalf")?Math.min(mx,curHp+Math.floor((mx-curHp)/2)):mx),curWill:mxW,depoCharge:1,crits:critsAfterRest(c),conds:[],cassettes:(c.cassettes||[]).map(function(x){return x.stuck?Object.assign({},x,{stuck:false}):x}),shakenPenalty:0,broken:false,repairUsed:false,combatDepoUsed:false}));pr.addLog({who:c.name||"???",type:"rest",label:"Полноценный отдых — всё восстановлено",detail:(noHeal2?"Доза 4+ — Здоровье не восстановлено":"Здоровье "+mx+"/"+mx)+", Воля "+mxW+"/"+mxW,total:0})}} title="Полностью восстанавливает Здоровье и Волю" className="n-btn n-btn-secondary" style={{color:"#4f5b2a",padding:"5px 14px",fontSize:12}}>Полноценный отдых</button>
 </div>
 </div>
 
@@ -265,7 +274,7 @@ else{oR({label:w.name+" Попад."+(aimP?" · "+selZone:""),d10:d,crit:R.crit,
 return <button key={nid} onClick={function(){sTgt(isSel?null:nid)}} style={{padding:"8px 12px",borderRadius:0,border:"1.5px solid "+(isSel?"#8a3b22":"var(--color-divider)"),background:isSel?"rgba(138,59,34,.12)":"var(--color-sunken)",cursor:"pointer",display:"flex",flexDirection:"column",gap:4,minWidth:90,textAlign:"left"}}>
 <span style={{fontWeight:700,fontSize:13}}>{n.name}</span>
 <div style={{width:66,height:5,background:"var(--color-bg)",borderRadius:0,overflow:"hidden"}}><div style={{height:"100%",width:hpPct+"%",background:hpPct<=25?"#8a3b22":hpPct<=50?"#8a6200":"#3f6b34"}}/></div>
-<span style={{fontSize:10,color:"var(--color-text-muted)"}}>{nHp+"/"+n.maxHp+" HP"}</span>
+<span style={{fontSize:10,color:"var(--color-text-muted)"}}>{nHp+"/"+n.maxHp+" HP"}</span>{condsOf(n).length>0&&<span style={{fontSize:10,color:"#8a3b22",fontWeight:700}}>{condsOf(n).map(function(x){var d=condByKey(x.key);return d.icon+" "+d.name}).join(", ")}</span>}
 </button>})}
 </div>
 {tgtNpc&&(function(){var atD=ARMOR_T.find(function(a){return a.id===(tgtNpc.armorBody||"none")})||ARMOR_T[0];var nHp=tgtNpc.hp!==undefined?tgtNpc.hp:tgtNpc.maxHp;var hpPct=tgtNpc.maxHp>0?(nHp/tgtNpc.maxHp)*100:0;

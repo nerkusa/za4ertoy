@@ -10,6 +10,8 @@ import { cF, mHP, willPenalty } from '../../utils/character';
 import { calcAE } from '../../utils/combat';
 import { r1, rN, sm, uid, rollHit } from '../../utils/dice';
 import GMAttackPanel from '../combat/GMAttackPanel';
+import { condsOf, condTurnStart } from '../../utils/conditions';
+import CondBar from '../CondBar';
 import PlayerAttackNotif from '../combat/PlayerAttackNotif';
 import RollPopup from '../combat/RollPopup';
 import InitiativeBar from '../combat/InitiativeBar';
@@ -102,7 +104,14 @@ function rollInitiative(){
   if(pr.saveInitiative)pr.saveInitiative({list:list,turn:0,round:1});
   pr.addLog({who:"ГМ",type:"spawn",label:"Инициатива брошена",detail:list.map(function(x){return x.name+":"+x.init}).join(", "),total:0});
 }
-function nextTurn(){var init=pr.initiative;if(!init||!init.list||!init.list.length)return;var n=(init.turn||0)+1;var round=init.round||1;if(n>=init.list.length){n=0;round++}if(pr.saveInitiative)pr.saveInitiative(Object.assign({},init,{turn:n,round:round}))}
+function nextTurn(){var init=pr.initiative;if(!init||!init.list||!init.list.length)return;var n=(init.turn||0)+1;var round=init.round||1;if(n>=init.list.length){n=0;round++}if(pr.saveInitiative)pr.saveInitiative(Object.assign({},init,{turn:n,round:round}));
+  /* начало хода NPC: огонь, пропуск хода, отсчёт состояний (у игроков — на их клиенте) */
+  var ent=init.list[n];var sp=ent&&ent.kind==="npc"?spawned[ent.id]:null;
+  if(sp&&condsOf(sp).length){var ct=condTurnStart(sp);var hp=sp.hp!==undefined?sp.hp:sp.maxHp;var nh=Math.max(0,hp-ct.dmg);
+    var all=Object.assign({},spawned);all[ent.id]=Object.assign({},sp,{conds:ct.conds,hp:nh});pr.saveSpawned(all);
+    if(ct.notes.length)pr.addLog({who:sp.name,type:"crit",label:sp.name+": "+ct.notes.join(", "),detail:"начало хода"+(ct.dmg?" · Здоровье "+hp+"→"+nh:""),total:ct.dmg});
+    if(ct.ended.length)setTimeout(function(){pr.addLog({who:sp.name,type:"rest",label:sp.name+": прошло — "+ct.ended.join(", "),detail:"",total:0})},5)}
+}
 function endCombat(){if(pr.saveInitiative)pr.saveInitiative(null);(pr.characters||[]).forEach(function(pc){if(pc.combatDepoUsed)set(ref(db,"rooms/"+pr.roomCode+"/characters/"+pc._fbId+"/combatDepoUsed"),false)});pr.addLog({who:"ГМ",type:"spawn",label:"Бой окончен",detail:"",total:0})}
 
 /* Применить урон к игроку (с учётом брони и зоны) */
@@ -244,6 +253,7 @@ return <button key={pc._fbId} onClick={function(){sPlayerTgt(isSel?null:pc._fbId
 return <div key={id} style={{background:"#e2d8c3",border:"1px solid #c6bba3",borderRadius:0,padding:"5px 7px",marginBottom:4}}>
 <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}><span style={{display:"flex",alignItems:"center",gap:5,fontWeight:700,fontSize:11}}>{s.avatar&&<img src={s.avatar} alt="" style={{width:20,height:20,borderRadius:0,objectFit:"cover"}}/>}{s.name}<FacBadge id={s.faction}/>{s.faction&&((pr.factions||{})[s.faction]||{}).rep<=-3?<span style={{fontSize:10,color:"#8a3b22",fontWeight:700,marginLeft:4}}>враги партии: нападает сразу</span>:null} <span style={{fontSize:11,color:"#6a6052"}}>Ур.{s.level}</span></span><div style={{display:"flex",gap:4,alignItems:"center"}}><button onClick={function(){updateSpawned(id,Object.assign({},s,{side:s.side==="ally"?"enemy":"ally"}))}} title="Сторона: союзник/враг" style={{fontSize:11,padding:"1px 6px",borderRadius:0,border:"1px solid "+(s.side==="ally"?"#3f6b3440":"#8a3b2240"),background:s.side==="ally"?"#e5e4cc":"#efe2d6",color:s.side==="ally"?"#3f6b34":"#8a3b22",fontWeight:700,cursor:"pointer"}}>{s.side==="ally"?"союзник":"враг"}</button><button onClick={function(){if(window.confirm("Убрать "+s.name+"?"))despawn(id)}} style={{fontSize:11,background:"none",border:"none",color:"#8a3b22",cursor:"pointer"}}>✕</button></div></div>
 {s.note&&<div style={{fontSize:11,color:"#6a6052",fontStyle:"italic"}}>{s.note}</div>}
+<div style={{marginTop:3}}><CondBar target={s} edit={true} onChange={function(conds,label){updateSpawned(id,Object.assign({},s,{conds:conds}));if(pr.addLog)pr.addLog({who:"ГМ",type:"crit",label:s.name+": "+label,detail:"",total:0})}}/></div>
 {(s.hp||0)<=0&&<div style={{background:"#211d18",borderRadius:0,padding:"3px 7px",marginTop:3,textAlign:"center",fontSize:11,color:"#e2d8c3",fontWeight:700}}>Повержен</div>}
 <div style={{display:"flex",alignItems:"center",gap:3,marginTop:2}}><span style={{fontSize:11}}></span><div style={{flex:1,background:"#e2d8c3",borderRadius:0,height:8,overflow:"hidden"}}><div style={{height:"100%",width:hpP+"%",background:(s.hp||0)<=0?"#211d18":"#8a3b22",borderRadius:0}}/></div><div style={{display:"flex",gap:1}}>{[-5,-1,1,5].map(function(d){return <button key={d} onClick={function(){updateSpawned(id,Object.assign({},s,{hp:Math.max(0,Math.min(s.maxHp,(s.hp||0)+d))}))}} style={{padding:"1px 4px",borderRadius:0,fontSize:10,fontWeight:700,border:"1px solid #c6bba3",background:d<0?"#efe2d6":"#e5e4cc",color:d<0?"#8a3b22":"#3f6b34",cursor:"pointer"}}>{d>0?"+"+d:d}</button>})}</div><span style={{fontSize:11,fontWeight:700,fontFamily:"var(--f-body)"}}>{(s.hp||0)+"/"+s.maxHp}</span></div>
 {s.armorHead&&s.armorHead!=="none"&&<div style={{fontSize:10,color:"#6a6052",marginTop:1}}>{s.armorHeadName||(ARMOR_T.find(function(a){return a.id===s.armorHead})||{}).name||s.armorHead} {s.armorHeadHp||0}/{s.armorHeadMaxHp||0}</div>}
