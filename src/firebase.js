@@ -69,6 +69,9 @@ function connect() {
     } else if (msg.t === 'auth' && msg.rid != null) {
       var w3 = waiters.get(msg.rid);
       if (w3) { waiters.delete(msg.rid); if (msg.ok && msg.token) sessionToken = msg.token; w3.resolve({ ok: !!msg.ok, error: msg.error || null, login: msg.login, role: msg.role, token: msg.token || null }); }
+    } else if ((msg.t === 'backup' || msg.t === 'restore') && msg.rid != null) {
+      var w5 = waiters.get(msg.rid);
+      if (w5) { waiters.delete(msg.rid); w5.resolve({ ok: !!msg.ok, error: msg.error || null, data: msg.data || null }); }
     } else if (msg.t === 'change_account' && msg.rid != null) {
       var w4 = waiters.get(msg.rid);
       if (w4) { waiters.delete(msg.rid); w4.resolve({ ok: !!msg.ok, error: msg.error || null, login: msg.login, role: msg.role }); }
@@ -184,7 +187,14 @@ function authLogout() {
   send({ t: 'logout', token: t });
 }
 function setSessionLostHandler(fn) { onSessionLost = fn; }
+/* Резервная копия мира (только мастер) */
+function gmBackup() {
+  return new Promise(function (resolve) { var rid = 'r' + (ridSeq++); waiters.set(rid, { resolve: resolve }); send({ t: 'backup', rid: rid }); });
+}
+function gmRestore(data) {
+  return new Promise(function (resolve) { var rid = 'r' + (ridSeq++); waiters.set(rid, { resolve: resolve }); send({ t: 'restore', rid: rid, data: data }); });
+}
 
 var db = {};
 
-export { db, ref, set, get, onValue, update, remove, push, authLogin, authRegister, authChangeAccount, authDeleteAccount, authResume, authLogout, setSessionLostHandler };
+export { db, ref, set, get, onValue, update, remove, push, authLogin, authRegister, authChangeAccount, authDeleteAccount, authResume, authLogout, setSessionLostHandler, gmBackup, gmRestore };

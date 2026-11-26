@@ -244,6 +244,23 @@ wss.on('connection', function (ws) {
       scheduleSave();
       changed.forEach(notify);
       if (msg.rid) ws.send(JSON.stringify({ t: 'ack', rid: msg.rid }));
+    } else if (msg.t === 'backup') {
+      /* Резервная копия мира и аккаунтов (пароли — только хеши). Только мастер. */
+      if (!isGM(ws)) { ws.send(JSON.stringify({ t: 'backup', rid: msg.rid, ok: false, error: 'Только мастер' })); return; }
+      ws.send(JSON.stringify({ t: 'backup', rid: msg.rid, ok: true, data: { app: 'zachertoy', version: 1, ts: Date.now(), tree: tree, users: users } }));
+    } else if (msg.t === 'restore') {
+      /* Восстановить из копии: мир целиком, аккаунты — добавить и обновить */
+      let error = null;
+      const d = msg.data;
+      if (!isGM(ws)) error = 'Только мастер';
+      else if (!d || d.app !== 'zachertoy' || !d.tree || typeof d.tree !== 'object') error = 'Это не копия мира «За Чертой»';
+      if (!error) {
+        tree = d.tree;
+        if (d.users && typeof d.users === 'object') Object.keys(d.users).forEach(function (k) { const u = d.users[k]; if (u && u.salt && u.hash) users[k] = { salt: u.salt, hash: u.hash }; });
+        scheduleSave(); scheduleUsersSave();
+        subs.forEach(function (sub) { sendVal(sub); });
+      }
+      ws.send(JSON.stringify({ t: 'restore', rid: msg.rid, ok: !error, error: error }));
     } else if (msg.t === 'get') {
       const segments = splitPath(msg.path);
       ws.send(JSON.stringify({ t: 'get', rid: msg.rid, path: msg.path, value: readFor(ws, segments) }));

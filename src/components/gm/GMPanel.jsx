@@ -28,9 +28,11 @@ import GearEditor from './GearEditor';
 import VehiclesPanel from './VehiclesPanel';
 import GaragePanel from './GaragePanel';
 import DeckPanel from './DeckPanel';
+import BackupBox from './BackupBox';
 import TablesPanel from './TablesPanel';
 import CassetteGrant from './CassetteGrant';
 import SlepDecision from './SlepDecision';
+import { MOLVA_SHIFTS, clampMolva, molvaLevel, molvaBounty, canBuyOff, BUYOFF_PRICE } from '../../data/molva';
 import { endSessionRolls, cassDef, cassLabel } from '../../utils/cassettes';
 import FactionsPanel from './FactionsPanel';
 
@@ -99,6 +101,14 @@ function PartyCard(pr) {
 
   function log(label, detail) { if (pr.addGmLog) pr.addGmLog({ who: pr.myName || 'ГМ', target: c.name || '?', label: label, detail: detail || '' }); }
   function save(p) { pr.saveChar(c._fbId, Object.assign({}, c, p)); }
+  function pubLog(label, detail) { if (pr.addLog) pr.addLog({ who: c.name || '?', type: 'give', label: label, detail: detail || '', total: 0 }); }
+  /* Молва: сдвиг с причиной; в общий лог — что говорят на тракте */
+  function shiftMolva(n, why) {
+    const was = c.molva || 0; const now = clampMolva(was + n); if (now === was) return;
+    save({ molva: now });
+    pubLog('Молва ' + (n > 0 ? '+' : '') + n + ': ' + (was > 0 ? '+' : '') + was + ' → ' + (now > 0 ? '+' : '') + now + ' · ' + molvaLevel(now).name, why || '');
+    log('Молва', (c.name || '?') + ': ' + was + ' → ' + now + (why ? ' (' + why + ')' : ''));
+  }
   function giveXp() { const amt = parseInt(xg) || 0; if (!amt) return; save({ xp: Math.max(0, (c.xp || 0) + amt) }); log('Выдал опыт', c.name + ': ' + (amt > 0 ? '+' : '') + amt + ' XP'); setXg(''); }
   function giveMoney() { const amt = parseInt(mg) || 0; if (!amt) return; save({ money: Math.max(0, (c.money || 0) + amt) }); log('Деньги', c.name + ': ' + (amt > 0 ? '+' : '') + amt + ' ер.'); setMg(''); }
   function levelUp() {
@@ -141,7 +151,7 @@ function PartyCard(pr) {
           <dt>Доза</dt><dd>{dose + ' / 10' + (doseState(dose) ? ' · ' + doseState(dose) : '')}</dd>
           <dt>Болезни</dt><dd>{dis.length ? dis.map(function (d) { return d.name + ' (' + d.cure + ')'; }).join(', ') : '—'}</dd>
           <dt>Деньги</dt><dd>{fmtMoney(c.money || 0)}</dd>
-          <dt>Молва</dt><dd>{(c.molva > 0 ? '+' : '') + (c.molva || 0)}</dd>
+          <dt>Молва</dt><dd>{(c.molva > 0 ? '+' : '') + (c.molva || 0) + ' · ' + molvaLevel(c.molva || 0).name + (molvaBounty(c.molva || 0) ? ' · награда ' + molvaBounty(c.molva || 0) + ' ер.' : '')}</dd>
           <dt>Опыт</dt><dd>{xpp.got + '/' + xpp.need + ' до ур.' + (xpp.level + 1) + (xpp.ready ? ' · готов' : '') + ' · награда: +1 очко навыка и +2 Здоровья'}</dd>
           <dt>Браслет</dt><dd>{b ? b.name + ' · свободно ' + ni.free + ' из ' + ni.total : 'нет'}</dd>
           <dt>В гнёздах</dt><dd>{inNest.length ? inNest.map(function (x) { const d = cassDef(x, cat); return cassLabel(x, d, true) + (x.kind === 'fake' && x.fakeState ? ': ' + (x.fakeState === 'silent' ? 'молчит' : x.fakeState === 'copy' ? 'как копия' : 'застряла') : '') + (x.kind === 'slep' ? ', отпечаток ' + (x.imprint || 0) + ' ' + IMPRINT_STAGES[x.imprint || 0] : '') + (x.dead ? ', испорчена' : ''); }).join('; ') : '—'}</dd>
@@ -168,8 +178,11 @@ function PartyCard(pr) {
           <button className="btn sm" onClick={function () { const d = diseaseByKey(nd); if (d && !dis.some(function (x) { return x.key === d.key; })) { save({ diseases: dis.map(function (x) { return { key: x.key, name: x.name }; }).concat([{ key: d.key, name: d.name }]) }); log('Болезнь', c.name + ': ' + d.name); } }}>Заразить</button>
           {dis.map(function (d) { return <button key={d.key} className="btn sm" onClick={function () { save({ diseases: dis.filter(function (x) { return x.key !== d.key; }).map(function (x) { return { key: x.key, name: x.name }; }) }); log('Снял болезнь', c.name + ': ' + d.name); }}>{'Снять: ' + d.name}</button>; })}
           <button className="btn sm" title="d30 по таблице безделушек, в сумку" onClick={function () { const t = rollTrinket(r1); save(grantPatch(c, getTraits(), t.item)); log('Безделушка', c.name + ': d30 = ' + t.roll + ' — ' + t.item.desc + ' (' + t.item.price + ' ер.)'); if (pr.addLog) pr.addLog({ who: 'ГМ', type: 'give', label: 'ГМ выдал безделушку → ' + (c.name || '?'), detail: t.item.desc, total: 0 }); }}>Безделушка</button>
-          <button className="btn sm" onClick={function () { save({ molva: Math.max(-5, (c.molva || 0) - 1) }); }}>Молва −</button>
-          <button className="btn sm" onClick={function () { save({ molva: Math.min(5, (c.molva || 0) + 1) }); }}>Молва +</button>
+          <button className="btn sm" onClick={function () { shiftMolva(-1, ''); }}>Молва −</button>
+          <button className="btn sm" onClick={function () { shiftMolva(1, ''); }}>Молва +</button>
+          <select value="" onChange={function (e) { const sh = MOLVA_SHIFTS[parseInt(e.target.value)]; if (sh) shiftMolva(sh.n, sh.t); }} title="Сдвиг по таблице книги"><option value="">Молва за поступок…</option>{MOLVA_SHIFTS.map(function (sh, i) { return <option key={i} value={i}>{(sh.n > 0 ? '+' : '') + sh.n + ' · ' + sh.t}</option>; })}</select>
+          {canBuyOff(c.molva || 0) && <button className="btn sm" title="Пока Молва не ниже −3: 100 ер. за ступень, у губернатора" onClick={function () { if ((c.money || 0) < BUYOFF_PRICE) { alert('Нужно ' + BUYOFF_PRICE + ' ер.'); return; } save({ money: (c.money || 0) - BUYOFF_PRICE, molva: clampMolva((c.molva || 0) + 1) }); pubLog('Откуп у губернатора: Молва ' + (c.molva || 0) + ' → ' + ((c.molva || 0) + 1), BUYOFF_PRICE + ' ер.'); }}>{'Откуп −' + BUYOFF_PRICE + ' ер.'}</button>}
+          {(c.molva || 0) < 0 && <button className="btn sm" title="Заказ Полиса через Артель или Jaeger Corp: +1, не выше нуля" onClick={function () { save({ molva: Math.min(0, (c.molva || 0) + 1) }); pubLog('Служба Полису: Молва ' + (c.molva || 0) + ' → ' + Math.min(0, (c.molva || 0) + 1), ''); }}>Служба Полису +1</button>}
           {c.lifepath && !c.lifepath.done && <button className={'btn sm' + (c.lifepathReroll ? ' main' : '')} onClick={function () { save({ lifepathReroll: !c.lifepathReroll }); log('Жизненный путь', c.name + (c.lifepathReroll ? ': переброс запрещён' : ': переброс разрешён')); }}>{c.lifepathReroll ? 'Переброс разрешён' : 'Разрешить переброс жизненного пути'}</button>}
           {c.lifepath && c.lifepath.done && <button className="btn sm" title="Игрок снова пройдёт шаг 7; эффекты прошлых бросков останутся — правь лист вручную" onClick={function () { if (window.confirm('Вернуть игрока на шаг 7? Прошлые эффекты жизненного пути не откатятся.')) save({ lifepath: { done: false, roots: [], inner: [], years: [] }, lifepathReroll: true }); }}>Жизненный путь заново</button>}
           <button className="btn sm" style={{ borderColor: 'var(--rust)', color: 'var(--rust)' }} onClick={del}>Удалить</button>
@@ -322,7 +335,7 @@ function GMPanel(pr) {
       <div className="gm-body">
         {section === 'overview' && <Overview characters={pr.characters} saveChar={pr.saveChar} deleteChar={pr.deleteChar} onOpen={function (id) { setSid(id); }} addLog={pr.addLog} addGmLog={pr.addGmLog} myName={pr.myName} shop={pr.shop} />}
         {section === 'chat' && <ChatSection chat={pr.chat} logs={pr.logs} sendChat={pr.sendChat} addLog={pr.addLog} clearChat={pr.clearChat} clearLogs={pr.clearLogs} characters={pr.characters} spawned={pr.spawned} />}
-        {section === 'history' && <HistoryPanel gmLog={pr.gmLog} clearGmLog={pr.clearGmLog} />}
+        {section === 'history' && <React.Fragment><BackupBox /><HistoryPanel gmLog={pr.gmLog} clearGmLog={pr.clearGmLog} /></React.Fragment>}
         {section === 'bestiary' && <BestiaryEditor npcTempl={pr.npcTempl} saveNpcTempl={pr.saveNpcTempl} spawned={pr.spawned} saveSpawned={pr.saveSpawned} onBack={backToOverview} addLog={pr.addLog} characters={pr.characters} roomCode={pr.roomCode} savePendingAttack={pr.savePendingAttack} clearPendingAttack={pr.clearPendingAttack} pendAtk={pr.pendAtk} logs={pr.logs} initiative={pr.initiative} saveInitiative={pr.saveInitiative} shop={pr.shop} scene={pr.scene} saveScene={pr.saveScene} vehicles={pr.vehicles} factions={pr.factions} />}
         {section === 'lore' && <LoreEditor lore={pr.lore} saveLore={pr.saveLore} mapData={pr.mapData} saveMap={pr.saveMap} characters={pr.characters} onBack={backToOverview} />}
         {section === 'profs' && <ProfEditor profs={pr.profs} saveProfs={pr.saveProfs} onBack={backToOverview} />}

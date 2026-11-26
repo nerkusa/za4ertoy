@@ -127,6 +127,7 @@ td.num{font-family:var(--f-mono);text-align:right;white-space:nowrap}
 .cond b{color:var(--rust);font-size:13px}.cond.c-fire{border-color:#c45a1c;background:#f5dcc4}.cond.c-deaf,.cond.c-stun{border-color:#8a6200}
 .cond button{border:1px solid currentColor;background:transparent;font-size:11px;padding:0 5px;cursor:pointer;color:inherit}
 .condbar select{font-size:12px;padding:2px 4px}
+.molva-box{margin-top:6px;font-size:13px}.molva-box summary{cursor:pointer;font-weight:600}
 .okbox{border-left:5px solid var(--swamp);background:#e5e4cc;padding:8px 12px;font-size:13.5px}
 
 /* bracelet */

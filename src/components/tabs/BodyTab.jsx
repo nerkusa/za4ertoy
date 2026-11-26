@@ -86,7 +86,7 @@ function LimbCard(lp){
     {gm&&<div className="row"><button className="btn sm" onClick={function(){apply(setLimb(c,cat,k,{broken:!l.broken}),LIMB_NAME[k]+(l.broken?": починен":": сломан"))}}>{l.broken?"Починен":"Сломать"}</button><button className="btn sm" onClick={function(){apply(setLimb(c,cat,k,{grade:l.grade==="rebuilt"?"new":"rebuilt"}))}}>{l.grade==="rebuilt"?"Сделать заводским":"Сделать перебранным"}</button><button className="btn sm" onClick={function(){if(window.confirm("Снять протез?"))apply(removeSolution(c,cat,{limb:k}))}}>Снять</button></div>}
   </div></div>;
 }
-function payWeek(){if(upk<=0)return;var pay=tryPay(c,upk);if(pay===null)return;sv(Object.assign({},c,pay));log({type:"gear",label:"Оплатил уход за железом: "+fmtMoney(upk)})}
+function payWeek(){if(upk<=0)return;var pay=tryPay(c,upk,{noMolva:true});if(pay===null)return;sv(Object.assign({},c,pay));log({type:"gear",label:"Оплатил уход за железом: "+fmtMoney(upk)})}
 function foodCheck(){
   var R=rollHit();var pen=inf.rollPen("vosp");var t=R.d+(fs.vosp||0)+(inf.eSk["Выживание"]||0)+pen.total;var ok=t>=12;
   log({type:"skill",label:"Проверить еду — "+(ok?"чисто (успех)":"не понял (провал)"),detail:"d10("+R.d+") + Восприятие("+(fs.vosp||0)+") + Выживание("+(inf.eSk["Выживание"]||0)+")"+(pen.total?" + штраф("+pen.total+")":"")+" = "+t+" против СЛ 12",total:t});
@@ -142,7 +142,7 @@ return(<div style={{display:"flex",flexDirection:"column",gap:12}}>
   {ironLegs(c).length>=2&&<p className="hint">Две железные ноги: +2 к Атлетике в погоне пешком.</p>}
   {ironLegs(c).length>0&&<p className="hint">Железная нога в топи: ещё −2 к Уклонению и Атлетике, если на ней не «Болотоход».</p>}
   {(s.addons||[]).length>Math.floor((fs.telo||0)/2)&&<div className="warnbox">{"Накладного больше, чем Тело/2 ("+Math.floor((fs.telo||0)/2)+")."}</div>}
-  {!gm&&<ShopPicker color="#4f5b2a" label="Купить солюшн" items={solShop} subOf={function(it){return it.sol==="implant"?(it.kind2||"implant"):it.sol}} suborder={["arm","hvatka","leg","tip","legtip","implant","addon"]} sublabels={{arm:"Протез руки",hvatka:"Временный протез",leg:"Протез ноги",tip:"Насадки на руку",legtip:"Насадки на ногу",implant:"Вживляемое",addon:"Накладное"}} sub={function(it){return it.desc||""}} onPick={buy}/>}
+  {!gm&&<ShopPicker molva={c.molva||0} color="#4f5b2a" label="Купить солюшн" items={solShop} subOf={function(it){return it.sol==="implant"?(it.kind2||"implant"):it.sol}} suborder={["arm","hvatka","leg","tip","legtip","implant","addon"]} sublabels={{arm:"Протез руки",hvatka:"Временный протез",leg:"Протез ноги",tip:"Насадки на руку",legtip:"Насадки на ногу",implant:"Вживляемое",addon:"Накладное"}} sub={function(it){return it.desc||""}} onPick={buy}/>}
 </div>
 
 <div className="sec rust">

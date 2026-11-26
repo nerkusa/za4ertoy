@@ -1,3 +1,4 @@
+import { molvaPrice } from '../../data/molva';
 import React, { useState } from 'react';
 import { uid, r1 } from '../../utils/dice';
 import { cF, hpOf, willOf } from '../../utils/character';
@@ -90,10 +91,10 @@ return(<div key={sk} style={{display:"flex",flexDirection:"column",gap:3}}>
 <span className="lblm" style={{color:"var(--swamp)"}}>{ITEM_SUBLABEL[sk]}</span>
 <span className="lblm">{(collapsed?"показать ":"скрыть ")+list.length}</span>
 </button>
-{!collapsed&&list.map(function(it){var ptype=it.ptype||(it.cat==="ammo"?"Пуля":"");var dice=it.dice||(it.cat==="tool"?"1d4":"");var cost=priceNum(it.price);
+{!collapsed&&list.map(function(it){var ptype=it.ptype||(it.cat==="ammo"?"Пуля":"");var dice=it.dice||(it.cat==="tool"?"1d4":"");var base=priceNum(it.price);var cost=molvaPrice(base,c.molva||0);
 return(<div key={it.id} style={{display:"flex",alignItems:"center",gap:8,borderBottom:"1px solid var(--line)",padding:"5px 2px"}}>
 <div style={{flex:1,minWidth:0}}>
-<div style={{fontWeight:700}}>{it.name}{cost>0?<span className="mono" style={{fontSize:12,color:"var(--swamp)",marginLeft:8}}>{fmtMoney(cost)}</span>:null}</div>
+<div style={{fontWeight:700}}>{it.name}{cost===null&&base>0?<span className="mono" style={{fontSize:12,color:"var(--rust)",marginLeft:8}}>не продают</span>:cost>0?<span className="mono" style={{fontSize:12,color:"var(--swamp)",marginLeft:8}}>{cost!==base&&<s style={{color:"var(--muted)",marginRight:4}}>{base}</s>}{fmtMoney(cost)}</span>:null}</div>
 <div className="hint">{[it.desc,ptype?("снаряд: "+ptype+(it.bundleQty>1?" ×"+it.bundleQty:"")):null,dice?"починка "+dice:null,it.heal?("+"+it.heal+(it.healWill?" Воли":" Здоровья")):null,it.doseHeal?("−"+it.doseHeal+" Дозы"):null].filter(Boolean).join(" · ")}</div>
 </div>
 <button className="btn sm" onClick={function(){pickItem(it)}}>Взять</button>

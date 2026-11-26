@@ -1,3 +1,4 @@
+import { clampMolva, molvaLevel, molvaSteps, molvaBounty, molvaPriceMult } from '../data/molva';
 import React from 'react';
 import { cF, hpOf, willOf, hpWords, xpProgress } from '../utils/character';
 import { getProfs } from '../utils/profStore';
@@ -63,11 +64,14 @@ return(<div className="dossier">
     </div>
     <div className="trk">
       <div className="lbl"><span>Молва</span></div>
-      <div className="val" style={{fontSize:19}}>{(molva>0?"+":"")+molva}</div>
-      {gm?<span className="pm" style={{marginLeft:0}}><button onClick={function(){sv(Object.assign({},c,{molva:Math.max(-5,molva-1)}))}}>−</button><button onClick={function(){sv(Object.assign({},c,{molva:Math.min(5,molva+1)}))}}>+</button></span>
+      <div className="val" style={{fontSize:19}}>{(molva>0?"+":"")+molva}<span className="lblm" style={{marginLeft:6,fontSize:10}}>{molvaLevel(molva).name}</span></div>
+      {gm?<span className="pm" style={{marginLeft:0}}><button onClick={function(){sv(Object.assign({},c,{molva:clampMolva(molva-1)}))}}>−</button><button onClick={function(){sv(Object.assign({},c,{molva:clampMolva(molva+1)}))}}>+</button></span>
          :null}
     </div>
   </div>
+  {molva!==0&&<details className="molva-box"><summary>{"Молва "+(molva>0?"+":"")+molva+" · "+molvaLevel(molva).name+(molvaBounty(molva)?" · награда за голову "+molvaBounty(molva)+" ер.":"")+(molvaPriceMult(molva)===null?" · не продают":molvaPriceMult(molva)!==1?" · цены "+(molvaPriceMult(molva)>1?"+":"−")+Math.round(Math.abs(molvaPriceMult(molva)-1)*100)+"%":"")}</summary>
+    {molvaSteps(molva).map(function(st){return <div key={st.n} className="logrow" style={{gridTemplateColumns:"34px 1fr"}}><span className="tm">{(st.n>0?"+":"")+st.n}</span><span><b>{st.name}.</b>{" "+st.text}{st.who?<span className="hint">{" Кто приходит: "+st.who}</span>:null}</span></div>})}
+  </details>}
   {xpp.ready&&!gm&&<div className="state" style={{color:"var(--ok)"}}>Опыта хватает на новый уровень — скажи мастеру.</div>}
 </div>
 </div>)}

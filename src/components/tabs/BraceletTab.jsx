@@ -150,7 +150,7 @@ return(<div style={{display:"flex",flexDirection:"column",gap:12}}>
   <h3>Кассетница</h3>
   {outN.length===0&&<p className="hint">Свободных кассет нет.</p>}
   {outN.length>0&&<div className="nests">{outN.map(function(x){return CassCard(x,false)})}</div>}
-  {!gm&&<ShopPicker color="#4f5b2a" label="Купить кассету или браслет" items={(pr.shop||[]).filter(function(i){return (i.cat==="cassette"||(i.cat==="solution"&&i.sol==="bracelet"))&&!i.notForSale})} sub={function(it){return it.desc||""}} onPick={buy}/>}
+  {!gm&&<ShopPicker molva={c.molva||0} color="#4f5b2a" label="Купить кассету или браслет" items={(pr.shop||[]).filter(function(i){return (i.cat==="cassette"||(i.cat==="solution"&&i.sol==="bracelet"))&&!i.notForSale})} sub={function(it){return it.desc||""}} onPick={buy}/>}
 </div>
 <div className="sec">
   <div className="row" style={{justifyContent:"space-between"}}><h3>Таблица шумов</h3><button className="btn sm" onClick={function(){sShowNoise(!showNoise)}}>{showNoise?"Скрыть":"Показать"}</button></div>

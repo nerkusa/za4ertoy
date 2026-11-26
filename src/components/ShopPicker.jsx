@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { priceNum, fmtMoney } from '../utils/currency';
+import { molvaPrice } from '../data/molva';
 
 // Reusable "take from shop" picker.
 // props: items, color, onPick(item), sub(item)->string, label,
@@ -12,11 +13,13 @@ export default function ShopPicker(pr) {
 
 
   function row(it) {
-    const cost = priceNum(it.price);
+    const base = priceNum(it.price);
+    /* с Молвой персонажа (props.molva) — цена у торговца */
+    const cost = pr.molva != null ? molvaPrice(base, pr.molva) : base;
     return (
       <div key={it.id} style={{ display: 'flex', alignItems: 'center', gap: 6, background: '#f1ead9', border: '1px solid #c6bba3', borderRadius:0, padding: '4px 7px' }}>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: 10, fontWeight: 700, color: '#211d18' }}>{it.name}{cost > 0 ? <span style={{ fontSize: 11, color: '#8a6200', marginLeft: 5 }}>{fmtMoney(cost)}</span> : null}</div>
+          <div style={{ fontSize: 10, fontWeight: 700, color: '#211d18' }}>{it.name}{cost === null ? <span style={{ fontSize: 11, color: '#8a3b22', marginLeft: 5 }}>не продают</span> : cost > 0 ? <span style={{ fontSize: 11, color: '#8a6200', marginLeft: 5 }}>{cost !== base && <s style={{ color: '#6a6052', marginRight: 4 }}>{base}</s>}{fmtMoney(cost)}</span> : null}</div>
           {pr.sub && <div style={{ fontSize: 11, color: '#6a6052' }}>{pr.sub(it)}</div>}
         </div>
         <button onClick={function () { pr.onPick(it); setOpen(false); }} style={{ padding: '3px 9px', borderRadius:0, border: 'none', background: color, color: '#ebe3d1', fontWeight: 700, fontSize: 11, cursor: 'pointer' }}>Взять</button>

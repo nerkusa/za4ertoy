@@ -719,3 +719,21 @@ describe('состояния', function(){
     expect(cOf({conds:removeCond({conds:addCond({},'fire')},'fire')}).length).toBe(0);
   });
 });
+
+/* ── Молва по главе 8 ── */
+import { clampMolva, molvaPrice, molvaBounty, molvaSteps, canBuyOff, molvaLevel } from '../data/molva';
+import { tryPay as tp } from '../utils/currency';
+describe('Молва', function(){
+  test('шкала −6…+6', function(){expect(clampMolva(9)).toBe(6);expect(clampMolva(-9)).toBe(-6);expect(molvaLevel(6).name).toBe('Легенда тракта');expect(molvaLevel(-6).name).toBe('Вне закона')});
+  test('цены', function(){
+    expect(molvaPrice(100,0)).toBe(100);expect(molvaPrice(100,-1)).toBe(120);expect(molvaPrice(100,2)).toBe(90);expect(molvaPrice(100,5)).toBe(80);expect(molvaPrice(100,-2)).toBeNull();
+    expect(tp({money:200,molva:-1},100)).toEqual({money:80});
+    window.alert=function(){};expect(tp({money:200,molva:-3},100)).toBeNull();
+    expect(tp({money:200,molva:-3},100,{noMolva:true})).toEqual({money:100});
+  });
+  test('награда, ступени, откуп', function(){
+    expect(molvaBounty(-3)).toBe(0);expect(molvaBounty(-4)).toBe(200);expect(molvaBounty(-6)).toBe(300);
+    expect(molvaSteps(-3).map(function(s){return s.name})).toEqual(['Косые взгляды','Отказ','Дорожники']);
+    expect(canBuyOff(-3)).toBe(true);expect(canBuyOff(-4)).toBe(false);expect(canBuyOff(0)).toBe(false);
+  });
+});

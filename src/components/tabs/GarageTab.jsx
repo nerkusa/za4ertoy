@@ -70,7 +70,7 @@ return(<div style={{display:"flex",flexDirection:"column",gap:12}}>
       {v.wheelsHit>0&&<button className="btn sm" onClick={function(){fix(e,"wheel")}}>{(v.tracks?"Гусеница":"Колесо")+" · СЛ 14"}</button>}
     </div>}
   </VehicleCard>})}</div>
-  {!gm&&<ShopPicker color="#4f5b2a" label="Купить машину" items={(pr.shop||[]).filter(function(i){return i.cat==="vehicle"})} sub={function(it){return it.desc||""}} onPick={buy}/>}
+  {!gm&&<ShopPicker molva={c.molva||0} color="#4f5b2a" label="Купить машину" items={(pr.shop||[]).filter(function(i){return i.cat==="vehicle"})} sub={function(it){return it.desc||""}} onPick={buy}/>}
   <p className="hint">Бак считается в перегонах. Канистра — +1 перегон (мотоциклу и квадроциклу +2). Ремонт Корпуса — за час: ящик инструментов 1d6 или проволока 1d4, вещь тратится. Мотор и колесо — Механика СЛ 14.</p>
 </div>)}
 
