@@ -4,17 +4,19 @@ import { S } from '../../styles/ui';
 var TOKEN_COLORS = ["#8a3b22", "#8a6200", "#8a6200", "#eab308", "#84cc16", "#3f6b34", "#4f5b2a", "#4f5b2a", "#6366f1", "#8a3b22", "#6b2f4a", "#211d18", "#ffffff", "#a16207", "#0f766e", "#8a3b22", "#be185d", "#b45309", "#b2b6ca", "#8a3b22"];
 
 function MapView(pr){var md=pr.mapData||{};var sMD=pr.saveMap;var chars=pr.characters||[];var isGM=pr.isGM;var cId=pr.charId;
-var _view=useState("local");var view=_view[0];var sView=_view[1];var isWorld=view==="world";
+/* Карта тракта 2035 — карта мира по умолчанию (лежит в public/maps) */
+var WORLD_DEFAULT=(process.env.PUBLIC_URL||"")+"/maps/trakt-2035.webp";
+var _view=useState(function(){return (pr.mapData||{}).image?"local":"world"});var view=_view[0];var sView=_view[1];var isWorld=view==="world";
 var imgKey=isWorld?"imageWorld":"image";var tokKey=isWorld?"tokensWorld":"tokens";
-var img=md[imgKey]||"";var tokens=md[tokKey]||[];
+var img=md[imgKey]||(isWorld?WORLD_DEFAULT:"");var isDefaultWorld=isWorld&&!md[imgKey];var tokens=md[tokKey]||[];
 function setImg(dataUrl){if(sMD){var o={};o[imgKey]=dataUrl;sMD(Object.assign({},md,o))}}
 var mapSwitch=(<div style={{display:"flex",gap:4,marginBottom:2}}>
   <button onClick={function(){sView("local");sZoom(1)}} style={{flex:1,padding:"6px 4px",borderRadius:0,border:"2px solid #3f6b34"+(isWorld?"20":""),background:isWorld?"#f1ead9":"#e5e4cc",color:"#3f6b34",fontWeight:700,fontSize:10,cursor:"pointer"}}>Локальная</button>
   <button onClick={function(){sView("world");sZoom(1)}} style={{flex:1,padding:"6px 4px",borderRadius:0,border:"2px solid #4f5b2a"+(isWorld?"":"20"),background:isWorld?"#e5e4cc":"#f1ead9",color:"#4f5b2a",fontWeight:700,fontSize:10,cursor:"pointer"}}>Масштабная (1:1)</button>
 </div>);
-var mapTitle=md.title||"Карта Мидфаля";
+var mapTitle=md.title||"Карта тракта";
 var titleBar=isGM
-  ?<input value={md.title||""} onChange={function(e){if(sMD)sMD(Object.assign({},md,{title:e.target.value}))}} placeholder="Карта Мидфаля" style={{width:"100%",boxSizing:"border-box",textAlign:"center",fontFamily:"var(--f-body)",fontWeight:700,fontSize:15,background:"#f1ead9",color:"#211d18",border:"2px solid #c6bba3",borderRadius:0,padding:"4px 8px",outline:"none",marginBottom:4}}/>
+  ?<input value={md.title||""} onChange={function(e){if(sMD)sMD(Object.assign({},md,{title:e.target.value}))}} placeholder="Карта тракта" style={{width:"100%",boxSizing:"border-box",textAlign:"center",fontFamily:"var(--f-body)",fontWeight:700,fontSize:15,background:"#f1ead9",color:"#211d18",border:"2px solid #c6bba3",borderRadius:0,padding:"4px 8px",outline:"none",marginBottom:4}}/>
   :<div style={{textAlign:"center",fontFamily:"var(--f-body)",fontWeight:700,fontSize:15,color:"#211d18",marginBottom:4}}>{mapTitle}</div>;
 var _dr=useState(null);var drId=_dr[0];var sDrId=_dr[1];
 var _off=useState({x:0,y:0});var drOff=_off[0];var sDrOff=_off[1];
@@ -33,7 +35,7 @@ var allT=liveT||tokens.slice();
 function saveTk(nt){if(sMD){var o={};o[tokKey]=nt;sMD(Object.assign({},md,o))}}
 function updTk(id,patch){saveTk(tokens.map(function(t){return t.id===id?Object.assign({},t,patch):t}))}
 function canDr(t){return isGM||(t.charId&&t.charId===cId)}
-var _imgEl=useState(null);var imgEl=_imgEl[0];var sImgEl=_imgEl[1];
+var _imgEl=useState(null);var imgEl=_imgEl[0];var sImgEl=_imgEl[1];var _ld=useState(0);var sLoaded=_ld[1];
 var contRef=useRef(null);
 /* Зум колесом мыши (native listener с passive:false, чтобы можно было preventDefault) */
 useEffect(function(){
@@ -79,9 +81,10 @@ return <div style={{display:"flex",flexDirection:"column",gap:6}}>
   {/* Единственный контейнер — картинка с position:relative, токены absolute внутри неё */}
   <div style={{position:"relative",display:"inline-block",lineHeight:0}}>
     <img ref={function(el){sImgEl(el)}} src={img}
+      onLoad={function(e){/* после загрузки знаем размер; большую карту вписываем по ширине */var el=e.target;var cw=contRef.current?contRef.current.clientWidth-4:0;if(cw>0&&el.naturalWidth>cw)sZoom(Math.max(0.25,Math.floor(cw/el.naturalWidth*100)/100));sLoaded(function(n){return n+1})}}
       style={{
         display:"block",
-        width:(imgEl?imgEl.naturalWidth*zoom:300)+"px",
+        width:(imgEl&&imgEl.naturalWidth?imgEl.naturalWidth*zoom:300)+"px",
         maxWidth:"none",
         pointerEvents:"none"
       }} alt="map"/>
@@ -123,7 +126,7 @@ return <div style={{display:"flex",flexDirection:"column",gap:6}}>
 <div style={{display:"flex",gap:2,flexWrap:"wrap",justifyContent:"center"}}>{TOKEN_COLORS.map(function(cl){return <button key={cl} onClick={function(){sPColor(cl)}} style={{width:18,height:18,borderRadius:"50%",background:cl,border:pColor===cl?"3px solid #b2b6ca":"1.5px solid #3f424d",cursor:"pointer",flexShrink:0,padding:0}}/>})}</div>
 <button onClick={function(){var me=chars.find(function(c2){return(c2._fbId||c2.id)===cId});saveTk(tokens.concat([{id:"ch-"+cId,charId:cId,name:me?me.name:"?",x:50,y:50,color:pColor,size:6,type:"player"}]))}} style={{padding:"6px 12px",borderRadius:0,border:"2px solid #4f5b2a30",background:"#e5e4cc",fontWeight:700,fontSize:10,color:"#4f5b2a",cursor:"pointer",width:"100%"}}>Создать мой жетон ({pColor==="#4f5b2a"?"цвет по умолч.":"выбран цвет"})</button>
 </div>}
-{isGM&&<div style={{display:"flex",gap:3}}><button onClick={function(){sSN(!sn)}} style={{flex:1,padding:6,borderRadius:0,border:"2px solid #8a3b2220",background:"#efe2d6",fontWeight:700,fontSize:11,color:"#8a3b22",cursor:"pointer"}}>{sn?"✕":"+ Жетон"}</button><label style={{padding:"6px 10px",borderRadius:0,border:"2px solid #3f6b3420",background:"#e5e4cc",fontWeight:700,fontSize:11,color:"#3f6b34",cursor:"pointer",textAlign:"center"}}>Сменить<input type="file" accept="image/*" style={{display:"none"}} onChange={function(e){var f=e.target.files&&e.target.files[0];if(!f)return;var r=new FileReader();r.onload=function(ev){setImg(ev.target.result)};r.readAsDataURL(f)}}/></label></div>}
+{isGM&&<div style={{display:"flex",gap:3}}><button onClick={function(){sSN(!sn)}} style={{flex:1,padding:6,borderRadius:0,border:"2px solid #8a3b2220",background:"#efe2d6",fontWeight:700,fontSize:11,color:"#8a3b22",cursor:"pointer"}}>{sn?"✕":"+ Жетон"}</button><label style={{padding:"6px 10px",borderRadius:0,border:"2px solid #3f6b3420",background:"#e5e4cc",fontWeight:700,fontSize:11,color:"#3f6b34",cursor:"pointer",textAlign:"center"}}>Сменить<input type="file" accept="image/*" style={{display:"none"}} onChange={function(e){var f=e.target.files&&e.target.files[0];if(!f)return;var r=new FileReader();r.onload=function(ev){setImg(ev.target.result)};r.readAsDataURL(f)}}/></label>{isWorld&&!isDefaultWorld&&<button onClick={function(){if(window.confirm("Вернуть карту тракта 2035 вместо загруженной?"))setImg(null)}} style={{padding:"6px 10px",borderRadius:0,border:"2px solid #8a620020",background:"#efe2d6",fontWeight:700,fontSize:11,color:"#8a6200",cursor:"pointer"}}>Карта тракта</button>}</div>}
 {isGM&&sn&&<div style={{background:"#efe2d6",border:"1px solid #8a3b2220",borderRadius:0,padding:6,display:"flex",flexDirection:"column",gap:4}}><input style={S.inp} value={nn} onChange={function(e){sNN(e.target.value)}} placeholder="Имя жетона"/>
 <div style={{display:"flex",gap:2,flexWrap:"wrap"}}>{TOKEN_COLORS.map(function(cl){return <button key={cl} onClick={function(){sNC(cl)}} style={{width:18,height:18,borderRadius:"50%",background:cl,border:nc===cl?"3px solid #b2b6ca":"1.5px solid #3f424d",boxShadow:nc===cl?"0 0 0 2px "+cl:"none",cursor:"pointer",flexShrink:0}}/>})}</div>
 <div style={{display:"flex",gap:3,alignItems:"center"}}><label style={{fontSize:11,fontWeight:700,color:"#6a6052",whiteSpace:"nowrap"}}>Размер (px):</label><input style={Object.assign({},S.inp,{width:50,fontSize:11,padding:2,textAlign:"center"})} type="number" min={2} max={60} value={ns} onChange={function(e){sNS(parseInt(e.target.value)||4)}}/><span style={{fontSize:11,color:"#6a6052"}}>мин 2, макс 60</span></div>

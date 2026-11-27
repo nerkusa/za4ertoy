@@ -81,7 +81,7 @@ function EditCard(pr) {
   const meta = pr.meta;
   const color = meta.color || '#8a3b22';
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px', borderRadius:0, border: '2px solid ' + color + '20', background: color + '0c' }}>
+    <div onClick={function (e) { if (e.target.closest && e.target.closest('button')) return; if (pr.onOpen) pr.onOpen(); }} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px', borderRadius:0, border: '2px solid ' + color + '20', background: color + '0c', cursor: pr.onOpen ? 'pointer' : 'default' }}>
       <div style={{ width: 30, height: 30, borderRadius:0, background: color + '1c', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 15, flexShrink: 0 }}>{meta.icon}</div>
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ fontFamily: "var(--f-body)", fontWeight: 700, fontSize: 11, color: '#211d18', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{meta.title}</div>
