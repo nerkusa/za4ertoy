@@ -5,7 +5,7 @@ import { CSS } from './styles/globalCss';
 import { nC } from './utils/character';
 import { migrateChar, needsMigration } from './utils/migrate';
 import { buildShopDefaults, buildMiscDefaults } from './data/shopDefaults';
-import { buildNpcDefaults } from './data/npcDefaults';
+import { buildAllNpcDefaults } from './data/npcPacks';
 import { setProfs } from './utils/profStore';
 import { setTraits } from './utils/traitStore';
 import { setScene } from './utils/sceneStore';
@@ -71,7 +71,7 @@ get(ref(db,"rooms/"+room+"/seeded")).then(function(snap){
   if(snap.exists())return;
   set(ref(db,"rooms/"+room+"/seeded"),Date.now());
   set(ref(db,"rooms/"+room+"/shop"),buildShopDefaults().concat(buildMiscDefaults()));
-  set(ref(db,"rooms/"+room+"/npcTemplates"),buildNpcDefaults());
+  set(ref(db,"rooms/"+room+"/npcTemplates"),buildAllNpcDefaults());
 })},[room,isGM]);
 /* Старый персонаж игрока: один раз записываем его в схеме v3 */
 useEffect(function(){if(!room||isGM||!pId)return;var mine=chars[pId];if(mine&&needsMigration(mine))set(ref(db,"rooms/"+room+"/characters/"+pId),migrateChar(mine))},[room,isGM,pId,chars[pId]]);

@@ -40,11 +40,32 @@ function scrubChar(c) {
   return y;
 }
 
+function scrubSpawned(n) {
+  if (!isObj(n) || !n.campaign) return n;
+  const y = Object.assign({}, n); delete y.note; delete y.arc; delete y.group; delete y.campaign;
+  return y;
+}
+
 /* value лежит по пути segs; вернуть то, что можно отдать игроку */
 function scrubAt(segs, value, getAt) {
   if (value == null) return value;
   if (segs.length > 0 && segs[0] !== 'rooms') return value;
   if (segs.length >= 3 && segs[2] === 'gmLog') return null;
+  /* бестиарий мастера (в т.ч. NPC кампании) игроку не нужен и не отдаётся */
+  if (segs.length >= 3 && segs[2] === 'npcTemplates') return null;
+  /* NPC кампании на поле: игроку — без заметок мастера (там спойлеры) */
+  if (segs.length >= 3 && segs[2] === 'spawned') {
+    if (segs.length === 3) {
+      if (!isObj(value)) return value;
+      const outS = {};
+      Object.keys(value).forEach(function (k) { outS[k] = scrubSpawned(value[k]); });
+      return outS;
+    }
+    if (segs.length === 4) return scrubSpawned(value);
+    let nodeS = scrubSpawned(getAt(segs.slice(0, 4)));
+    for (let i = 4; i < segs.length; i++) { if (!isObj(nodeS)) return null; nodeS = nodeS[segs[i]]; }
+    return nodeS === undefined ? null : nodeS;
+  }
   if (segs.length >= 3 && segs[2] === 'characters') {
     if (segs.length === 3) {
       if (!isObj(value)) return value;
@@ -119,4 +140,19 @@ function restoreHidden(oldC, newC) {
   return { char: c, events: events };
 }
 
-module.exports = { scrubAt, scrubChar, scrubCassette, charIdsTouched, restoreHidden, clone, NOISE };
+/* Игрок сохранил NPC (урон, состояния): вернуть скрытые поля NPC кампании */
+function spawnedIdsTouched(segs, value, getAt) {
+  if (segs[0] !== 'rooms' || segs[2] !== 'spawned') return [];
+  if (segs.length >= 4) return [segs[3]];
+  const ids = {};
+  [getAt(segs), value].forEach(function (v) { if (isObj(v)) Object.keys(v).forEach(function (k) { ids[k] = true; }); });
+  return Object.keys(ids);
+}
+function restoreSpawned(oldN, newN) {
+  if (!isObj(newN) || !isObj(oldN) || !oldN.campaign) return newN;
+  const y = Object.assign({}, newN);
+  ['note', 'arc', 'group', 'campaign'].forEach(function (k) { if (oldN[k] !== undefined) y[k] = oldN[k]; });
+  return y;
+}
+
+module.exports = { spawnedIdsTouched, restoreSpawned, scrubAt, scrubChar, scrubCassette, charIdsTouched, restoreHidden, clone, NOISE };

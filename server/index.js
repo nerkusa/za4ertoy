@@ -228,7 +228,14 @@ wss.on('connection', function (ws) {
         const ids = gm ? [] : hidden.charIdsTouched(segments, w[1], getAt);
         const before = {};
         ids.forEach(function (id) { before[id] = hidden.clone(getAt(['rooms', segments[1], 'characters', id])); });
+        const sIds = gm ? [] : hidden.spawnedIdsTouched(segments, w[1], getAt);
+        const beforeS = {};
+        sIds.forEach(function (id) { beforeS[id] = hidden.clone(getAt(['rooms', segments[1], 'spawned', id])); });
         setAt(segments, w[1]);
+        sIds.forEach(function (id) {
+          const ps = ['rooms', segments[1], 'spawned', id]; const cur = getAt(ps);
+          if (cur !== null) setAt(ps, hidden.restoreSpawned(beforeS[id], cur));
+        });
         changed.push(segments);
         ids.forEach(function (id) {
           const cs = ['rooms', segments[1], 'characters', id];

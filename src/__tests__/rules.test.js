@@ -737,3 +737,24 @@ describe('Молва', function(){
     expect(canBuyOff(-3)).toBe(true);expect(canBuyOff(-4)).toBe(false);expect(canBuyOff(0)).toBe(false);
   });
 });
+
+/* ── Паки NPC: общий и кампании ── */
+import { buildAllNpcDefaults, CAMPAIGN_CAT } from '../data/npcPacks';
+describe('паки NPC', function(){
+  var all=buildAllNpcDefaults();
+  var names=function(cat){return Object.keys(all[cat]||{}).filter(function(k){return k!=='_created'}).map(function(k){return all[cat][k].name})};
+  test('всё на месте и без дублей ключей', function(){
+    var total=0;Object.keys(all).forEach(function(c){total+=names(c).length});
+    expect(names(CAMPAIGN_CAT).length).toBe(27);
+    expect(names(CAMPAIGN_CAT)).toEqual(expect.arrayContaining(['Линза','Шов','Чистый','Президент Арсеньев','Кочерга']));
+    expect(names('Твари')).toEqual(expect.arrayContaining(['Секач','Болотный огонёк']));
+    expect(names('Полис')).toEqual(expect.arrayContaining(['Снайпер йегерей']));
+    expect(total).toBeGreaterThan(100);
+  });
+  test('сторона → фракция, арка сохранена', function(){
+    var f=function(cat,nm){var c=all[cat];return c[Object.keys(c).find(function(k){return c[k].name===nm})]};
+    expect(f('Фракции за трактом','Жрец огня').faction).toBe('kult');
+    expect(f(CAMPAIGN_CAT,'Линза').arc).toBe('1–3');expect(f(CAMPAIGN_CAT,'Линза').campaign).toBe(true);
+    expect(f(CAMPAIGN_CAT,'Линза').xpReward).toBe(40);
+  });
+});

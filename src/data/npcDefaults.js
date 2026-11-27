@@ -29,13 +29,13 @@ function npc(name,st,hp,o){
   return{name:name,level:o.level||1,hp:hp,maxHp:hp,xpReward:hp*(o.xpMult||1),faction:o.faction||null,
     zoneMult:o.zoneMult||null,halfKR:!!o.halfKR,ironCrit:!!o.ironCrit,
     stats:{telo:s[0],reak:s[1],vosp:s[2],razum:s[3],har:s[4],volya:s[5]},
-    skills:o.skills||{},extraSkills:o.extra||{},weapons:o.weapons||[],note:o.note||'',
+    skills:o.skills||{},extraSkills:o.extra||{},weapons:o.weapons||[],note:o.note||'',group:o.group||'',arc:o.arc||'',
     armorHead:h.type,armorHeadHp:h.hp,armorHeadMaxHp:h.hp,armorHeadName:h.name,
     armorBody:b.type,armorBodyHp:b.hp,armorBodyMaxHp:b.hp,armorBodyName:b.name,
     shieldType:'none',shieldHp:0,shieldMaxHp:0,shieldName:''};
 }
 /* Подсказки мастеру к группам бестиария */
-var GROUP_HINTS={'Твари':'Пересмешник и Перевёртыш — разные: зверь и человек. Народ зовёт обоих «юёр».'};
+var GROUP_HINTS={'Твари':'Пересмешник и Перевёртыш — разные: зверь и человек. Народ зовёт обоих «юёр».','Кампания «Падение Запада»':'Только для мастера: игроки этот раздел не видят. Рядом с кличкой — сторона и арки, где персонаж появляется. Сладкий, Ротный, Дархан, Пересмешник, Перевёртыш и Карточница — в своих разделах.'};
 function buildNpcDefaults(){
   var cats={};
   function add(cat,list){var obj={_created:Date.now()};list.forEach(function(n,i){obj['npc_seed_'+Object.keys(cats).length+'_'+i]=n});cats[cat]=obj}
@@ -98,4 +98,4 @@ function buildNpcDefaults(){
   return cats;
 }
 
-export { buildNpcDefaults, GROUP_HINTS };
+export { buildNpcDefaults, GROUP_HINTS, npc, w, W };
